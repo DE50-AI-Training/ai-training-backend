@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from api.schemas.model import ModelWithArchitecture
+from api.schemas.model import ModelCreate, ModelUpdate, ModelWithArchitecture
 
 router = APIRouter(prefix="/models", tags=["models"])
 
@@ -31,3 +31,18 @@ async def get_models() -> list[ModelWithArchitecture]:
             },
         },
     ]
+
+
+@router.post("/")
+async def create_model(model: ModelCreate) -> ModelWithArchitecture:
+    pass
+
+
+@router.put("/{model_id}")
+async def update_model(model_id: int, model: ModelUpdate) -> ModelWithArchitecture:
+    pass
+
+
+@router.delete("/{model_id}")
+async def delete_model(model_id: int) -> None:
+    pass

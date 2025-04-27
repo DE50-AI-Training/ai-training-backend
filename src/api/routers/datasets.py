@@ -4,5 +4,5 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 
 
 @router.get("/")
-async def get_datasets():
+async def get_datasets() -> list[Dataset]:
     return []

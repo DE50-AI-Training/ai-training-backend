@@ -10,6 +10,10 @@ class ModelCreate(SQLModel):
     architecture: MLPArchitectureCreate
 
 
+class ModelUpdate(SQLModel):
+    name: Optional[str] = None
+
+
 class ModelRead(SQLModel):
     id: int
     name: str
