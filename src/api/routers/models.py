@@ -1,41 +1,42 @@
 from fastapi import APIRouter
+from sqlmodel import select
 
+from api.database import MLPArchitecture, Model, SessionDep
 from api.schemas.model import ModelCreate, ModelUpdate, ModelWithArchitecture
 
 router = APIRouter(prefix="/models", tags=["models"])
 
 
 @router.get("/")
-async def get_models() -> list[ModelWithArchitecture]:
-    return [
-        {
-            "id": 1,
-            "name": "Test Model",
-            "architecture": {
-                "id": 1,
-                "input_size": 784,
-                "output_size": 10,
-                "activation": "relu",
-                "layers": [128, 64],
-            },
-        },
-        {
-            "id": 2,
-            "name": "Another Model",
-            "architecture": {
-                "id": 2,
-                "input_size": 784,
-                "output_size": 10,
-                "activation": "sigmoid",
-                "layers": [256, 128],
-            },
-        },
-    ]
+async def get_models(session: SessionDep) -> list[ModelWithArchitecture]:
+    statement = select(Model)
+    models = session.exec(statement).all()
+    return models
 
 
 @router.post("/")
-async def create_model(model: ModelCreate) -> ModelWithArchitecture:
-    pass
+async def create_model(
+    model: ModelCreate, session: SessionDep
+) -> ModelWithArchitecture:
+    mlp_architecture = None
+    if model.mlp_architecture:
+        mlp_architecture = MLPArchitecture(
+            input_size=model.mlp_architecture.input_size,
+            output_size=model.mlp_architecture.output_size,
+            activation=model.mlp_architecture.activation,
+            layers=model.mlp_architecture.layers,
+        )
+        session.add(mlp_architecture)
+        session.flush()
+
+    db_model = Model(
+        name=model.name, dataset_id=model.dataset_id, mlp_architecture=mlp_architecture
+    )
+
+    session.add(db_model)
+    session.commit()
+    session.refresh(db_model)
+    return db_model
 
 
 @router.put("/{model_id}")

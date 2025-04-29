@@ -1,26 +1,33 @@
 from typing import Optional, Union
 
+from fastapi_camelcase import CamelModel
 from sqlmodel import SQLModel
 
 from api.schemas.architecture import MLPArchitectureCreate, MLPArchitectureRead
 
 
-class ModelCreate(SQLModel):
+class ModelBase(SQLModel, CamelModel):
     name: str
-    architecture: MLPArchitectureCreate
 
 
-class ModelUpdate(SQLModel):
-    name: Optional[str] = None
+class ModelCreate(ModelBase):
+    dataset_id: int
+    mlp_architecture: Optional[MLPArchitectureCreate]
+
+    # TODO: add validation to ensure that there can only be one architecture type per model
 
 
-class ModelRead(SQLModel):
+class ModelUpdate(ModelBase):
+    pass
+
+
+class ModelRead(ModelBase):
     id: int
-    name: str
+    dataset_id: int
 
     class Config:
         from_attributes = True
 
 
 class ModelWithArchitecture(ModelRead):
-    architecture: Union[MLPArchitectureRead]
+    mlp_architecture: Optional[MLPArchitectureRead]

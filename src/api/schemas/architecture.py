@@ -1,9 +1,10 @@
 from typing import List
 
-from sqlmodel import SQLModel
+from sqlmodel import Field, SQLModel
+from fastapi_camelcase import CamelModel
 
 
-class ArchitectureBase(SQLModel):
+class ArchitectureBase(SQLModel, CamelModel):
     input_size: int
     output_size: int
 
