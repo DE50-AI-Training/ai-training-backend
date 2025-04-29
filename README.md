@@ -2,4 +2,4 @@
 - Run `poetry install`
 - Create and edit `.env` file from `.env.example`
 - Run the project `poetry run start-dev`
-- See documentation: `localhost:8000/docs`
+- See documentation: `localhost:8000`
