@@ -1,35 +1,18 @@
-import os
+from contextlib import asynccontextmanager
 
-import uvicorn
 from fastapi import FastAPI
+from sqlmodel import SQLModel
 
-from config import settings
-
-app = FastAPI()
-
-
-def run_dev() -> None:
-    uvicorn.run(
-        "api.main:app",
-        host="127.0.0.1",
-        port=settings.port,
-        workers=settings.uvicorn_workers,
-        reload=True,
-        factory=False,
-    )
+from api.database import engine
+from api.routers import datasets, models
 
 
-def run_prod() -> None:
-    uvicorn.run(
-        "api.main:app",
-        host="0.0.0.0",
-        port=settings.port,
-        workers=settings.uvicorn_workers,
-        reload=False,
-        factory=False,
-    )
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    SQLModel.metadata.create_all(engine)
+    yield
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+app = FastAPI(lifespan=lifespan, docs_url="/")
+app.include_router(models.router)
+app.include_router(datasets.router)

@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     uvicorn_workers: int = Field(1, env="UVICORN_WORKERS")
     port: int = Field(8000, env="PORT")
+    database_url: str = Field("sqlite:///database.db", env="DATABASE_URL")
 
     class Config:
         env_file = ".env"
