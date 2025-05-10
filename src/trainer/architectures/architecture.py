@@ -24,4 +24,5 @@ class Architecture:
 
     def save(self, path: str) -> None:
         del self.__dict__['arch_info']
-        json.dump(self.__dict__, open(path, 'w'), indent=4)
+        with open(path, 'w') as f:
+            json.dump(self.__dict__, f, indent=4)

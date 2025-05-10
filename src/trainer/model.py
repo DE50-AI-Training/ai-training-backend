@@ -49,3 +49,5 @@ def create_model(arch_dict: dict) -> Model:
         raise ValueError("Architecture type is required")
     if arch_dict['architecture'] == 'MLP':
         return MLP(MLPArchitecture(arch_dict))
+    else:
+        raise ValueError(f"Unsupported architecture: {arch_dict['architecture']}. Supported architectures are Currently MLP.")

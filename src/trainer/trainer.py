@@ -11,7 +11,7 @@ class Trainer:
         self.loss_fn = loss_fn
         self.optimizer = optimizer
     
-    def train_loop(self, dataloader: DataLoader, batch_size: int, device: torch.device) -> None:
+    def train_loop(self, dataloader: DataLoader, device: torch.device) -> None:
         self.model.to(device)
         self.model.train()
         for batch, (X, y) in enumerate(dataloader):
