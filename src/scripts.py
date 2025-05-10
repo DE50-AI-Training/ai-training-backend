@@ -1,5 +1,7 @@
 import uvicorn
+from sqlmodel import SQLModel
 
+from api.database import engine
 from config import settings
 
 
@@ -22,3 +24,7 @@ def run_prod() -> None:
         reload=False,
         factory=False,
     )
+
+
+def create_db() -> None:
+    SQLModel.metadata.create_all(engine)

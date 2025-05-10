@@ -1,14 +1,17 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, File, UploadFile
+from sqlmodel import select
 
+from api.database import Dataset, SessionDep
 from api.schemas.dataset import DatasetCreate, DatasetRead, DatasetTransformation
-from fastapi import File, UploadFile
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
 
 @router.get("/")
-async def get_datasets() -> list[DatasetRead]:
-    return []
+async def get_datasets(session: SessionDep) -> list[DatasetRead]:
+    statement = select(Dataset)
+    datasets = session.exec(statement).all()
+    return datasets
 
 
 @router.post("/")
