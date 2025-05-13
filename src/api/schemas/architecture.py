@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import List
 
 from fastapi_camelcase import CamelModel
-from sqlmodel import Enum, Field, SQLModel
+from sqlmodel import SQLModel
 
 
 class ActivationEnum(StrEnum):

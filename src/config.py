@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     port: int = Field(8000, env="PORT")
     database_url: str = Field("sqlite:///database.db", env="DATABASE_URL")
     redis_url: str = Field("redis://localhost:6379", env="REDIS_URL")
+    storage_path: str = Field("storage", env="STORAGE_PATH")
 
     class Config:
         env_file = ".env"
