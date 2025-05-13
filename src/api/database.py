@@ -2,8 +2,9 @@ from typing import Annotated, List, Optional, Union
 
 from fastapi import Depends
 from sqlalchemy import JSON
-from sqlmodel import Column, Field, Relationship, Session, SQLModel, create_engine
+from sqlmodel import Column, Enum, Field, Relationship, Session, SQLModel, create_engine
 
+from api.schemas.architecture import ActivationEnum
 from config import settings
 
 # Create the database engine
@@ -22,15 +23,16 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 
 class ArchitectureBase(SQLModel):
-    input_size: int
-    output_size: int
+    activation: ActivationEnum = Field(
+        default=None, sa_column=Column(Enum(ActivationEnum))
+    )
 
 
 class MLPArchitecture(ArchitectureBase, table=True):
     __tablename__ = "mlparchitecture"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    activation: str
+    activation: ActivationEnum = Field(default=None, nullable=False)
     layers: List[int] = Field(default=[], sa_column=Column(JSON))
 
     model: Optional["Model"] = Relationship(back_populates="mlp_architecture")
@@ -45,6 +47,8 @@ class Model(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     dataset_id: Optional[int] = Field(default=None, foreign_key="dataset.id")
+    input_columns: List[int] = Field(default=[], sa_column=Column(JSON))
+    output_columns: List[int] = Field(default=[], sa_column=Column(JSON))
 
     mlp_architecture_id: Optional[int] = Field(
         default=None, foreign_key="mlparchitecture.id"
@@ -59,3 +63,4 @@ class Dataset(SQLModel, table=True):
     __tablename__ = "dataset"
     id: int = Field(default=None, primary_key=True)
     name: str
+    columns: List[str] = Field(default=[], sa_column=Column(JSON))

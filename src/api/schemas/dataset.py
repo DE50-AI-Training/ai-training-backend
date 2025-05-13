@@ -12,7 +12,7 @@ class DatasetCreate(DatasetBase):
 
 class DatasetRead(DatasetBase):
     id: int
-    dataset_type: str = Field(alias="datasetType")
+    columns: list[str]
 
 
 class DatasetTransformation(SQLModel):

@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from fastapi_camelcase import CamelModel
 from sqlmodel import SQLModel
@@ -8,6 +8,8 @@ from api.schemas.architecture import MLPArchitectureCreate, MLPArchitectureRead
 
 class ModelBase(SQLModel, CamelModel):
     name: str
+    input_columns: List[int]
+    output_columns: List[int]
 
 
 class ModelCreate(ModelBase):
