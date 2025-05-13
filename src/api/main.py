@@ -1,19 +1,23 @@
 from contextlib import asynccontextmanager
 
+import redis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
 from api.database import engine
 from api.routers import datasets, models
+from config import settings
 
 
+# Create the database engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     yield
 
 
+# Start the FastAPI app
 app = FastAPI(lifespan=lifespan, docs_url="/")
 app.include_router(models.router)
 app.include_router(datasets.router)
@@ -28,3 +32,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize redis
+redis = redis.Redis.from_url(settings.redis_url, decode_responses=True)
