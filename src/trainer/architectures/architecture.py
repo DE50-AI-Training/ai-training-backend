@@ -1,7 +1,7 @@
 import json
 
 ALL_ARCHS = ['MLP', 'CNN', 'ResNet']
-ALL_ACTIVATIONS = ['relu', 'sigmoid', 'tanh', 'softmax']
+ALL_ACTIVATIONS = ['relu', 'sigmoid', 'tanh']
 
 class Architecture:
     def __init__(self, arch_info: dict) -> None:
@@ -15,7 +15,8 @@ class Architecture:
         self.architecture = arch_info['architecture']
         self.output_size = arch_info['output_size']
         self.input_size = arch_info['input_size']
-
+        self.out_softmax = arch_info['out_softmax'] if 'out_softmax' in arch_info else False
+    
     def set_model_weights_path(self, path: str) -> None:
         self.model_weights_path = path
 

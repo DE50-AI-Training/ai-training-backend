@@ -13,7 +13,7 @@ class Model(nn.Module):
     def forward(self, x):
         raise NotImplementedError("Subclasses should implement this!")
     
-    def get_activation(self) -> None | nn.ReLU | nn.Sigmoid | nn.Tanh | nn.Softmax:
+    def get_activation(self) -> None | nn.ReLU | nn.Sigmoid | nn.Tanh:
         if self.arch.activation is None:
             return None
         if self.arch.activation == "relu":
@@ -22,8 +22,6 @@ class Model(nn.Module):
             return nn.Sigmoid()
         elif self.arch.activation == "tanh":
             return nn.Tanh()
-        elif self.arch.activation == "softmax":
-            return nn.Softmax(dim=1)
         else:
             raise ValueError(f"Unsupported activation function: {self.arch.activation}")
     

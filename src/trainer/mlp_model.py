@@ -16,6 +16,8 @@ class MLP(Model):
             if i < len(self.arch.layers) - 2:
                 self.model.add_module(f"relu_{i}", activation)
             in_features = layer
+        if self.arch.out_softmax:
+            self.model.add_module("softmax", nn.Softmax(dim=1))
 
     def forward(self, x):
         return self.model(x)
