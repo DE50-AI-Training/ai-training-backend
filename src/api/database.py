@@ -17,6 +17,7 @@ from sqlmodel import (
 
 from api.schemas.architecture import ActivationEnum
 from api.schemas.dataset import DatasetTypeEnum
+from api.schemas.model import ProblemTypeEnum
 from config import settings
 
 # Create the database engine
@@ -61,6 +62,14 @@ class Model(SQLModel, table=True):
     dataset_id: Optional[int] = Field(default=None, foreign_key="dataset.id")
     input_columns: List[int] = Field(default=[], sa_column=Column(JSON))
     output_columns: List[int] = Field(default=[], sa_column=Column(JSON))
+    problem_type: ProblemTypeEnum = Field(default=None, nullable=False)
+    created_at: Optional[datetime] = Field(
+        sa_column=Column(
+            TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=text("CURRENT_TIMESTAMP"),
+        )
+    )
 
     mlp_architecture_id: Optional[int] = Field(
         default=None, foreign_key="mlparchitecture.id"
