@@ -28,7 +28,10 @@ async def create_model(
         session.flush()
 
     db_model = Model(
-        name=model.name, dataset_id=model.dataset_id, mlp_architecture=mlp_architecture
+        name=model.name,
+        dataset_id=model.dataset_id,
+        problem_type=model.problem_type,
+        mlp_architecture=mlp_architecture,
     )
 
     session.add(db_model)
