@@ -1,11 +1,12 @@
 import pandas as pd
 
 class DataPreparation:
-    def __init__(self, filename: str, fraction: float = 0.8, cleaning: bool = True, seed: int = 42):
+    def __init__(self, filename: str, fraction: float = 0.8, cleaning: bool = True, seed: int = 42, image_column=None):
         self.filename = filename
         self.fraction = fraction
         self.cleaning = cleaning
         self.seed = seed
+        self.image_column = image_column
 
         self.df = None
         self.classes = {}

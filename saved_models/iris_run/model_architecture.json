@@ -1,0 +1,11 @@
+{
+    "architecture": "MLP",
+    "input_size": 4,
+    "output_size": 3,
+    "layers": [
+        4,
+        32,
+        3
+    ],
+    "activation": "relu"
+}
