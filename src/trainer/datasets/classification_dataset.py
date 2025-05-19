@@ -4,9 +4,8 @@ import pandas as pd
 import numpy as np
 
 class ClassificationDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, class_names: dict[str, list[str]], image_column=None) -> None:
+    def __init__(self, df: pd.DataFrame, class_names: dict[str, list[str]]) -> None:
         super().__init__()
-        self.image_column = image_column
         self.class_names = []
         for value_list in class_names.values():
             self.class_names.extend(value_list)
