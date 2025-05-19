@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from trainer.trainer import train_supervised_model 
+from trainer.trainer import train_classification_model 
 
 import pandas as pd
 
@@ -14,6 +14,7 @@ output_dim = df["variety"].nunique()
 
 config = {
     "csv_path": "tests/iris.csv",
+    "separator": ",",
     "target_column": "variety",
     # "image_column": None,
     # "model_class": MLP,
@@ -34,4 +35,4 @@ config = {
     "save_dir": "saved_models/iris_run2"
 }
 
-train_supervised_model(config)
+train_classification_model(config)

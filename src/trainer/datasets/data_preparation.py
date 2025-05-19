@@ -13,9 +13,9 @@ class DataPreparation:
         self.train_df = None
         self.test_df = None
 
-    def read_data(self) -> pd.DataFrame:
+    def read_data(self, sep=',') -> pd.DataFrame:
         if self.filename.endswith('.csv'):
-            self.df = pd.read_csv(self.filename)
+            self.df = pd.read_csv(self.filename, sep=sep)
         elif self.filename.endswith('.xlsx'):
             self.df = pd.read_excel(self.filename)
         else:
@@ -36,7 +36,7 @@ class DataPreparation:
             raise ValueError(f"Target column '{self.target_cols}' not found in the dataset")
         
         for col in self.target_cols:
-            self.classes[col] = self.df[col].unique().tolist()
+            self.classes[col] = [str(x) if not isinstance(x, str) else x for x in self.df[col].unique().tolist()]
         self.df = pd.get_dummies(self.df, columns=self.target_cols, prefix='', prefix_sep='')
     
     def split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
