@@ -21,8 +21,6 @@ async def create_model(
     mlp_architecture = None
     if model.mlp_architecture:
         mlp_architecture = MLPArchitecture(
-            input_size=model.mlp_architecture.input_size,
-            output_size=model.mlp_architecture.output_size,
             activation=model.mlp_architecture.activation,
             layers=model.mlp_architecture.layers,
         )
@@ -30,7 +28,10 @@ async def create_model(
         session.flush()
 
     db_model = Model(
-        name=model.name, dataset_id=model.dataset_id, mlp_architecture=mlp_architecture
+        name=model.name,
+        dataset_id=model.dataset_id,
+        problem_type=model.problem_type,
+        mlp_architecture=mlp_architecture,
     )
 
     session.add(db_model)

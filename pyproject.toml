@@ -16,6 +16,7 @@ dependencies = [
     "sqlmodel (>=0.0.24,<0.0.25)",
     "fastapi-camelcase (>=2.0.0,<3.0.0)",
     "python-multipart",
+    "redis (>=6.1.0,<7.0.0)",
 ]
 
 [tool.poetry]
@@ -35,3 +36,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 start-dev = "scripts:run_dev"
 start-prod = "scripts:run_prod"
+create-db = "scripts:create_db"

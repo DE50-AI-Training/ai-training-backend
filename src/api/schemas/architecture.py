@@ -1,16 +1,21 @@
+from enum import StrEnum
 from typing import List
 
-from sqlmodel import Field, SQLModel
 from fastapi_camelcase import CamelModel
+from sqlmodel import SQLModel
+
+
+class ActivationEnum(StrEnum):
+    relu = "relu"
+    sigmoid = "sigmoid"
+    tanh = "tanh"
 
 
 class ArchitectureBase(SQLModel, CamelModel):
-    input_size: int
-    output_size: int
+    activation: ActivationEnum
 
 
 class MLPArchitectureCreate(ArchitectureBase):
-    activation: str
     layers: List[int]
 
 

@@ -1,4 +1,6 @@
-from typing import Optional, Union
+from datetime import datetime
+from enum import StrEnum
+from typing import List, Optional, Union
 
 from fastapi_camelcase import CamelModel
 from sqlmodel import SQLModel
@@ -6,8 +8,15 @@ from sqlmodel import SQLModel
 from api.schemas.architecture import MLPArchitectureCreate, MLPArchitectureRead
 
 
+class ProblemTypeEnum(StrEnum):
+    classification = "classification"
+
+
 class ModelBase(SQLModel, CamelModel):
     name: str
+    input_columns: List[int]
+    output_columns: List[int]
+    problem_type: ProblemTypeEnum
 
 
 class ModelCreate(ModelBase):
@@ -24,6 +33,7 @@ class ModelUpdate(ModelBase):
 class ModelRead(ModelBase):
     id: int
     dataset_id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
