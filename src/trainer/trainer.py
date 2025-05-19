@@ -81,6 +81,7 @@ def create_model(arch_dict: dict) -> Model:
 def train_classification_model(config: dict):
     # --- read parameters ---
     csv_path = config['csv_path']
+    separator = config.get('separator', ',')
     target_columns = config['target_column'] if isinstance(config['target_column'], list) else [config['target_column']]
     # model_class = config['model_class']
     archi_info = config['model_arch']
@@ -100,7 +101,7 @@ def train_classification_model(config: dict):
         cleaning=cleaning,
         seed=seed
     )
-    data_prep.read_data()
+    data_prep.read_data(sep=separator)
     data_prep.extract_cols(target_columns)
     data_prep.split()
     train_set, test_set = data_prep.get_train_test()
