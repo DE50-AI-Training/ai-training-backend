@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torchprofile
 
-from architectures import Architecture, MLPArchitecture
-from mlp_model import MLP
+from trainer.architectures import Architecture
 
 class Model(nn.Module):
     def __init__(self, arch: Architecture):
@@ -29,10 +28,9 @@ class Model(nn.Module):
     
     def save(self, path: str) -> None:
         # To be implemented with the DB
-        pass
-        # torch.save(self.state_dict(), path)
-        # self.arch.set_model_weights_path(path)
-        # self.arch.save(path.replace('.pth', '_arch.json'))
+        torch.save(self.state_dict(), path)
+        self.arch.set_model_weights_path(path)
+        self.arch.save(path.replace('.pth', '_arch.json'))
 
     
     def size(self) -> int:
@@ -42,12 +40,3 @@ class Model(nn.Module):
         self.eval()
         dummy_input = torch.randn(input_shape)
         return torchprofile.profile_macs(self.cpu(), dummy_input)
-    
-
-def create_model(arch_dict: dict) -> Model:
-    if 'architecture' not in arch_dict:
-        raise ValueError("Architecture type is required")
-    if arch_dict['architecture'] == 'MLP':
-        return MLP(MLPArchitecture(arch_dict))
-    else:
-        raise ValueError(f"Unsupported architecture: {arch_dict['architecture']}. Supported architectures are Currently MLP.")

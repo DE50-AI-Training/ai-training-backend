@@ -1,4 +1,4 @@
-from model import Model, Architecture
+from trainer.models import Model, Architecture
 
 import torch.nn as nn
 

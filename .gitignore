@@ -4,3 +4,7 @@
 database.db
 .vscode
 storage
+*.pt
+*.pth
+*.csv
+*.json

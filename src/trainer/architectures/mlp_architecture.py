@@ -1,4 +1,4 @@
-from architecture import Architecture, ALL_ACTIVATIONS 
+from trainer.architectures import Architecture, ALL_ACTIVATIONS 
 
 class MLPArchitecture(Architecture):
     def __init__(self, arch_info: dict) -> None:

@@ -1,8 +1,15 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from model import Model
+from trainer.models import Model, MLP
+from trainer.architectures import Architecture, MLPArchitecture
+from trainer.datasets.data_preparation import DataPreparation
+from trainer.datasets.classification_dataset import ClassificationDataset
+
+import os
+import json
 
 
 class Trainer:
@@ -54,9 +61,79 @@ class Trainer:
     def train(self, batch_size: int, train_dl: DataLoader, test_dl: DataLoader, epochs: int, device: torch.device) -> None:
         for t in range(epochs):
             # print(f"Epoch {t+1}\n-------------------------------")
-            self.train_loop(train_dl, batch_size, device)
+            self.train_loop(train_dl, device)
             self.test_loop(test_dl, device)
         # print("Done!")
 
     def save(self, path: str) -> None:
         self.model.save(path)
+
+
+def create_model(arch_dict: dict) -> Model:
+    if 'architecture' not in arch_dict:
+        raise ValueError("Architecture type is required")
+    if arch_dict['architecture'] == 'MLP':
+        return MLP(MLPArchitecture(arch_dict))
+    else:
+        raise ValueError(f"Unsupported architecture: {arch_dict['architecture']}. Supported architectures are Currently MLP.")
+
+
+def train_classification_model(config: dict):
+    # --- read parameters ---
+    csv_path = config['csv_path']
+    target_columns = config['target_column'] if isinstance(config['target_column'], list) else [config['target_column']]
+    # model_class = config['model_class']
+    archi_info = config['model_arch']
+    learning_rate = config.get('learning_rate', 0.001)
+    epochs = config.get('epochs', 10)
+    batch_size = config.get('batch_size', 32)
+    test_fraction = config.get('fraction', 0.8)
+    cleaning = config.get('cleaning', False)
+    seed = config.get('seed', 42)
+    device = config.get('device', 'cpu')
+    # image_column = config.get('image_column', None)
+
+    # --- data prep ---
+    data_prep = DataPreparation(
+        csv_path,
+        fraction=test_fraction,
+        cleaning=cleaning,
+        seed=seed
+    )
+    data_prep.read_data()
+    data_prep.extract_cols(target_columns)
+    data_prep.split()
+    train_set, test_set = data_prep.get_train_test()
+    classes = data_prep.get_classes()
+
+    train_ds = ClassificationDataset(train_set, classes)
+    test_ds = ClassificationDataset(test_set, classes)
+
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size)
+
+    # --- model handling---
+    model = create_model(archi_info)
+    device = torch.device(device) # Could check if device is available
+    model.to(device)
+
+    # --- cost/opti ---
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # --- "real" training ---
+    trainer = Trainer(model, criterion, optimizer)
+    trainer.train(batch_size, train_loader, test_loader, epochs, device)
+
+    # --- saving ---
+    save_dir = config.get('save_dir', 'saved_models')
+    os.makedirs(save_dir, exist_ok=True)
+
+    model_path = os.path.join(save_dir, 'model.pt')
+    torch.save(model.state_dict(), model_path)
+
+    archi_path = os.path.join(save_dir, 'model_architecture.json')
+    with open(archi_path, 'w') as f:
+        json.dump(archi_info, f, indent=4)
+
+    print(f"\nTraining complete. Model saved to: {model_path}\nArchitecture saved to: {archi_path}")
