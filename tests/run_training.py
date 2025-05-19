@@ -3,8 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from trainer.trainer_class import train_supervised_model 
-from trainer.mlp_model import MLP 
+from trainer.trainer import train_supervised_model 
 
 import pandas as pd
 
@@ -16,23 +15,23 @@ output_dim = df["variety"].nunique()
 config = {
     "csv_path": "tests/iris.csv",
     "target_column": "variety",
-    "image_column": None,
-    "model_class": MLP,
+    # "image_column": None,
+    # "model_class": MLP,
     "model_arch": {
-    "architecture": "MLP",
-    "input_size": input_dim,
-    "output_size": output_dim,
-    "layers": [input_dim, 32, output_dim],
-    "activation": "relu"
+        "architecture": "MLP",
+        "input_size": input_dim,
+        "output_size": output_dim,
+        "layers": [input_dim, 32, output_dim],
+        "activation": "relu"
     },
     "learning_rate": 0.001,
     "epochs": 10,
     "batch_size": 16,
-    "test_fraction": 0.2,
+    "fraction": 0.8,
     "cleaning": False,
     "seed": 42,
     "device": "cpu",
-    "save_dir": "saved_models/iris_run"
+    "save_dir": "saved_models/iris_run2"
 }
 
 train_supervised_model(config)

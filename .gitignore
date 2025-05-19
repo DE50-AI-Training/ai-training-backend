@@ -3,3 +3,7 @@
 *__pycache__/
 database.db
 .vscode
+*.pt
+*.pth
+*.csv
+*.json
