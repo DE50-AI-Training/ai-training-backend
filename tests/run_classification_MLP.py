@@ -32,7 +32,7 @@ config = {
     "cleaning": False,
     "seed": 42,
     "device": "cpu",
-    "save_dir": "saved_models/iris_run2"
+    "save_dir": "saved_models/iris_run"
 }
 
 train_classification_model(config)
