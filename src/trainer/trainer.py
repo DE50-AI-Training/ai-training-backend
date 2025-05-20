@@ -134,6 +134,7 @@ def train_classification_model(config: dict):
     torch.save(model.state_dict(), model_path)
 
     archi_path = os.path.join(save_dir, 'model_architecture.json')
+    archi_info['model_path'] = model_path
     with open(archi_path, 'w') as f:
         json.dump(archi_info, f, indent=4)
 
