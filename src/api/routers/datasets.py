@@ -8,6 +8,7 @@ from sqlmodel import select
 from api.database import Dataset, SessionDep
 from api.schemas.dataset import DatasetCreate, DatasetRead, DatasetTransformation
 from config import settings
+import csv
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -26,17 +27,25 @@ async def upload_dataset(
     if not file.content_type.startswith("text/csv"):
         raise ValueError("The file must be a CSV file")
 
-    content = await file.read()
-    df = pd.read_csv(io.StringIO(content.decode("utf-8")))
+    raw_content = await file.read()
+    content = raw_content.decode("utf-8")
+
+    sniffer = csv.Sniffer()
+    delimiter = sniffer.sniff(content).delimiter
+    df = pd.read_csv(io.StringIO(content), delimiter=delimiter)
     columns = df.columns.tolist()
     row_count = df.shape[0]
+    unique_values_per_column=[df[col].nunique() for col in columns]
+    
     dataset = Dataset(
         name=file.filename,
         columns=columns,
+        unique_values_per_column=unique_values_per_column,
         row_count=row_count,
         created_at=pd.Timestamp.now(),
         dataset_type="csv",
         original_file_name=file.filename,
+        delimiter=delimiter,
         is_draft=True,
     )
 
@@ -46,8 +55,8 @@ async def upload_dataset(
 
     # On crée le dossier de stockage s'il n'existe pas
     makedirs(f"{settings.storage_path}/datasets", exist_ok=True)
-    with open(f"{settings.storage_path}/datasets/{dataset.id}", "wb") as f:
-        f.write(content)
+    with open(f"{settings.storage_path}/datasets/{dataset.id}.csv", "wb") as f:
+        f.write(raw_content)
 
     return dataset
 

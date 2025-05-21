@@ -1,13 +1,11 @@
 from contextlib import asynccontextmanager
 
-import redis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
 from api.database import engine
 from api.routers import datasets, models
-from config import settings
 
 
 # Create the database engine
@@ -32,6 +30,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize redis
-redis = redis.Redis.from_url(settings.redis_url, decode_responses=True)
