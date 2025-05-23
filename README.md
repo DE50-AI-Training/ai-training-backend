@@ -3,5 +3,9 @@
 - Run `poetry install`
 - Create and edit `.env` file from `.env.example`
 - Run the project `poetry run start-dev`
-- Run celery workers `celery -A trainer.trainer.app worker -l INFO`
+- Run celery workers from the poetry venv `celery -A trainer.trainer.app worker -l INFO`
 - See documentation: `localhost:8000`
+
+For windows users:
+- If you dont use docker, install redis for windows: https://github.com/redis-windows/redis-windows
+- Run celery from a administrator terminal with `--pool=solo` option (only for development)

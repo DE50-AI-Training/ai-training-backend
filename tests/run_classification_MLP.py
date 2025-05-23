@@ -3,8 +3,12 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
+from datetime import datetime
+
 import pandas as pd
 
+from api.redis import set_training
+from api.schemas.training import TrainingRead, TrainingStatusEnum
 from trainer.trainer import train_classification_model
 
 # chargement du dataset + adaptation de la config
@@ -12,10 +16,25 @@ df = pd.read_csv("tests/iris.csv")
 input_dim = df.drop(columns=["variety"]).shape[1]
 output_dim = df["variety"].nunique()
 
+
+training = TrainingRead(
+    batch_size=16,
+    max_epochs=10,
+    learning_rate=0.001,
+    session_start=datetime.now(),
+    training_time_at_start=0,
+    epochs=0,
+    status=TrainingStatusEnum.starting,
+    model_id=1,  # Dummy model_id for testing
+)
+
+# Needs redis to be running
+set_training(training)
+
 config = {
     "csv_path": "tests/iris.csv",
-    "separator": ";",
-    "target_columns": [11],
+    "separator": ",",
+    "target_columns": [4],
     # "image_column": None,
     # "model_class": MLP,
     "model_arch": {
@@ -25,9 +44,9 @@ config = {
         "layers": [input_dim, 32, output_dim],
         "activation": "relu",
     },
-    "learning_rate": 0.001,
-    "epochs": 10,
-    "batch_size": 16,
+    "learning_rate": training.learning_rate,
+    "epochs": training.max_epochs,
+    "batch_size": training.batch_size,
     "fraction": 0.8,
     "cleaning": False,
     "seed": 42,
@@ -35,4 +54,4 @@ config = {
     "save_dir": "saved_models/iris_run",
 }
 
-train_classification_model(1, config)
+train_classification_model(training.model_id, config)
