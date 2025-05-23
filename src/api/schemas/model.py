@@ -6,6 +6,7 @@ from fastapi_camelcase import CamelModel
 from sqlmodel import SQLModel
 
 from api.schemas.architecture import MLPArchitectureCreate, MLPArchitectureRead
+from api.schemas.training import TrainingRead
 
 
 class ProblemTypeEnum(StrEnum):
@@ -34,10 +35,15 @@ class ModelRead(ModelBase):
     id: int
     dataset_id: int
     created_at: datetime
+    last_batch_size: int
+    last_max_epochs: int
+    last_learning_rate: float
+    training_time: int
+    epochs_trained: int
 
     class Config:
         from_attributes = True
 
 
 class ModelWithArchitecture(ModelRead):
-    mlp_architecture: Optional[MLPArchitectureRead]
+    mlp_architecture: Optional[MLPArchitectureRead] = None

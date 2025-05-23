@@ -8,3 +8,4 @@ storage
 *.pth
 *.csv
 *.json
+*.venv

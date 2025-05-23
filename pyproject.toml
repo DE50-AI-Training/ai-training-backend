@@ -17,6 +17,8 @@ dependencies = [
     "fastapi-camelcase (>=2.0.0,<3.0.0)",
     "python-multipart",
     "redis (>=6.1.0,<7.0.0)",
+    "torchprofile (>=0.0.4,<0.0.5)",
+    "celery (>=5.5.2,<6.0.0)",
 ]
 
 [tool.poetry]

@@ -21,6 +21,7 @@ class DatasetRead(DatasetBase):
     id: int
     columns: list[str]
     row_count: int
+    unique_values_per_column: list[int]
     created_at: datetime
     dataset_type: DatasetTypeEnum
     original_file_name: str

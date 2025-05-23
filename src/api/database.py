@@ -60,8 +60,8 @@ class Model(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(default=None, nullable=False)
     dataset_id: Optional[int] = Field(default=None, foreign_key="dataset.id")
-    input_columns: List[int] = Field(default=[], sa_column=Column(JSON))
-    output_columns: List[int] = Field(default=[], sa_column=Column(JSON))
+    input_columns: List[int] = Field(default=None, sa_column=Column(JSON))
+    output_columns: List[int] = Field(default=None, sa_column=Column(JSON))
     problem_type: ProblemTypeEnum = Field(default=None, nullable=False)
     created_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -70,6 +70,11 @@ class Model(SQLModel, table=True):
             server_default=text("CURRENT_TIMESTAMP"),
         )
     )
+    last_batch_size: int = Field(default=None, nullable=False)
+    last_max_epochs: int = Field(default=None, nullable=False)
+    last_learning_rate: float = Field(default=None, nullable=False)
+    training_time: int = Field(default=0, nullable=False)
+    epochs_trained: int = Field(default=0, nullable=False)
 
     mlp_architecture_id: Optional[int] = Field(
         default=None, foreign_key="mlparchitecture.id"
@@ -86,6 +91,9 @@ class Dataset(SQLModel, table=True):
     name: str = Field(default=None, nullable=False)
     columns: List[str] = Field(default=[], sa_column=Column(JSON))
     row_count: int = Field(default=0, nullable=False)
+    unique_values_per_column: List[int] = Field(
+        default=[], sa_column=Column(JSON)
+    )
     created_at: Optional[datetime] = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
@@ -95,4 +103,5 @@ class Dataset(SQLModel, table=True):
     )
     dataset_type: DatasetTypeEnum = Field(default=None, nullable=False)
     original_file_name: str = Field(default=None, nullable=False)
+    delimiter: str = Field(default=",", nullable=False)
     is_draft: Optional[bool] = Field(default=True, nullable=False)
