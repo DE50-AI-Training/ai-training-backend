@@ -1,7 +1,10 @@
+import shutil
+
 import uvicorn
 from sqlmodel import SQLModel
 
 from api.database import engine
+from api.redis import redis
 from config import settings
 
 
@@ -28,3 +31,17 @@ def run_prod() -> None:
 
 def create_db() -> None:
     SQLModel.metadata.create_all(engine)
+    print("Database created.")
+
+
+def flush_redis() -> None:
+    redis.flushall()
+    print("Redis flushed.")
+
+
+def clean() -> None:
+    SQLModel.metadata.drop_all(engine)
+    print("Database cleaned.")
+    shutil.rmtree(settings.storage_path, ignore_errors=True)
+    print("Storage cleaned.")
+    flush_redis()
