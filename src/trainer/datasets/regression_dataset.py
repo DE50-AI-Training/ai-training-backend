@@ -1,15 +1,16 @@
+import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-import pandas as pd
-import numpy as np
-
 
 class RegressionDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, target_cols: list[str], dtype=torch.float32) -> None:
+    def __init__(
+        self, df: pd.DataFrame, target_cols: list[int], dtype=torch.float32
+    ) -> None:
         super().__init__()
-        self.x = df.drop(columns=target_cols).to_numpy()
-        self.y = df[target_cols].to_numpy()
+        self.x = df.drop(df.columns[target_cols], axis=1).to_numpy()
+        self.y = df.iloc[:, target_cols].to_numpy()
         self.dtype = dtype
 
     def get_x_y(self) -> tuple[np.ndarray, np.ndarray]:
@@ -23,11 +24,13 @@ class RegressionDataset(Dataset):
         # Check each column to see if it's boolean-like (has exactly 2 unique values)
         for col in range(self.x.shape[1]):
             unique_values = np.unique(self.x[:, col])
-            
+
             # If the column has more than 2 unique values, normalize it
             if len(unique_values) > 2:
-                self.x[:, col] = (self.x[:, col] - np.mean(self.x[:, col], axis=0)) / np.std(self.x[:, col], axis=0)    
-    
+                self.x[:, col] = (
+                    self.x[:, col] - np.mean(self.x[:, col], axis=0)
+                ) / np.std(self.x[:, col], axis=0)
+
     def __len__(self) -> int:
         return len(self.x)
 
