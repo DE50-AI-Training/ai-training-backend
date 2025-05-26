@@ -311,6 +311,6 @@ def train_regression_model(model_id: int, raw_config: dict):
         set_training(training)
     except Exception as e:
         print(f"Error during training: {e}")
-        # training.status = TrainingStatusEnum.error
-        # set_training(training)
+        training.status = TrainingStatusEnum.error
+        set_training(training)
         raise e
