@@ -171,6 +171,7 @@ def create_model(arch_dict: dict) -> Model:
 class TrainClassificationConfig(SQLModel):
     csv_path: str
     target_columns: List[int]
+    input_columns: List[int]
     separator: str
     model_arch: Dict[str, Any]
     learning_rate: float

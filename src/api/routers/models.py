@@ -127,6 +127,7 @@ async def train_model(
         "csv_path": f"{settings.storage_path}/datasets/{model.dataset_id}.csv",
         "separator": dataset.delimiter,
         "target_columns": model.output_columns,
+        "input_columns": model.input_columns,
         "model_arch": {
             "architecture": "MLP",
             "input_size": layers[0],
