@@ -203,6 +203,7 @@ def train_classification_model(model_id: int, raw_config: dict):
             seed=config.seed,
         )
         data_prep.read_data(sep=config.separator)
+        data_prep.select_input_columns(config.input_columns, config.target_columns)
         data_prep.extract_cols(config.target_columns)
         data_prep.split()
         train_set, test_set = data_prep.get_train_test()
@@ -257,6 +258,7 @@ def train_regression_model(config: dict):
         if isinstance(config["target_column"], list)
         else [config["target_column"]]
     )
+    input_columns = config.get("input_columns", None)
     # model_class = config['model_class']
     archi_info = config["model_arch"]
     learning_rate = config.get("learning_rate", 0.001)
