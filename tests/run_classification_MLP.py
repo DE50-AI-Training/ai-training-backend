@@ -35,13 +35,14 @@ config = {
     "csv_path": "tests/iris.csv",
     "separator": ",",
     "target_columns": [4],
+    "input_columns": [0, 1,3],
     # "image_column": None,
     # "model_class": MLP,
     "model_arch": {
         "architecture": "MLP",
-        "input_size": input_dim,
-        "output_size": output_dim,
-        "layers": [input_dim, 32, output_dim],
+        "input_size": 3,
+        "output_size": 3,
+        "layers": [3, 32, 3],
         "activation": "relu",
     },
     "learning_rate": training.learning_rate,
@@ -51,7 +52,7 @@ config = {
     "cleaning": False,
     "seed": 42,
     "device": "cpu",
-    "save_dir": "saved_models/iris_run",
+    "save_dir": "saved_models/iris_run5",
 }
 
 train_classification_model(training.model_id, config)
