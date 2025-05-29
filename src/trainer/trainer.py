@@ -207,6 +207,7 @@ def train_classification_model(model_id: int, raw_config: dict):
         data_prep.read_data(sep=config.separator)
         data_prep.select_input_columns(config.input_columns, config.target_columns)
         data_prep.extract_cols(config.target_columns)
+        data_prep.encode_categorical_inputs_as_dummies()
         data_prep.split()
         train_set, test_set = data_prep.get_train_test()
         classes = data_prep.get_classes()

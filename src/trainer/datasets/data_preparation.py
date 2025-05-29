@@ -69,6 +69,19 @@ class DataPreparation:
 
         self.df = pd.get_dummies(self.df, columns=self.target_cols, prefix="", prefix_sep="")
 
+    def encode_categorical_inputs_as_dummies(self) -> None:
+        if self.df is None:
+            raise ValueError("Data not loaded. Call read_data() first.")
+
+        input_col_names = [self.df.columns[idx] for idx in self.input_cols]
+
+        for col in input_col_names:
+            if self.df[col].dtype == object or self.df[col].dtype.name == "category":
+                dummies = pd.get_dummies(self.df[col], prefix=col)
+                self.df = self.df.drop(columns=[col])
+                self.df = pd.concat([self.df, dummies], axis=1)
+        self.df = self.df.astype(float)
+
     def split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         if not (0 < self.fraction <= 1):
             raise ValueError("Fraction must be between 0 and 1")
