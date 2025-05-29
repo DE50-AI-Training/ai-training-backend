@@ -112,9 +112,13 @@ class Trainer:
 
 class TrainerRegression(Trainer):
     def __init__(
-        self, model: Model, loss_fn: nn.Module, optimizer: torch.optim.Optimizer
+        self,
+        training: TrainingRead,
+        model: Model,
+        loss_fn: nn.Module,
+        optimizer: torch.optim.Optimizer,
     ) -> None:
-        super().__init__(model, loss_fn, optimizer)
+        super().__init__(training, model, loss_fn, optimizer)
 
     def train_loop(self, dataloader: DataLoader, device: torch.device) -> None:
         self.model.train()
@@ -155,7 +159,7 @@ class TrainerRegression(Trainer):
 
         avg_loss = total_loss / num_batches
         avg_abs_error /= size
-        # print(f"AvgLoss: {avg_loss:>8f}, AvgAbsError: {avg_abs_error:.3f}%")
+        print(f"AvgLoss: {avg_loss:>8f}, AvgAbsError: {avg_abs_error:.3f}%")
         self.training.score = avg_abs_error
 
 
@@ -170,7 +174,7 @@ def create_model(arch_dict: dict) -> Model:
         )
 
 
-class TrainClassificationConfig(SQLModel):
+class TrainConfig(SQLModel):
     csv_path: str
     target_columns: List[int]
     separator: str
@@ -190,7 +194,7 @@ class TrainClassificationConfig(SQLModel):
 def train_classification_model(model_id: int, raw_config: dict):
     # --- read parameters ---
     try:
-        config = TrainClassificationConfig(**raw_config)
+        config = TrainConfig(**raw_config)
         archi_info = raw_config["model_arch"]
         training = get_training(model_id)
         if training is None:
@@ -250,49 +254,65 @@ def train_classification_model(model_id: int, raw_config: dict):
         raise e
 
 
-def train_regression_model(config: dict):
-    csv_path = config["csv_path"]
-    separator = config.get("separator", ",")
-    target_columns = (
-        config["target_column"]
-        if isinstance(config["target_column"], list)
-        else [config["target_column"]]
-    )
-    # model_class = config['model_class']
-    archi_info = config["model_arch"]
-    learning_rate = config.get("learning_rate", 0.001)
-    epochs = config.get("epochs", 10)
-    batch_size = config.get("batch_size", 32)
-    test_fraction = config.get("fraction", 0.8)
-    cleaning = config.get("cleaning", False)
-    seed = config.get("seed", 42)
-    device = config.get("device", "cpu")
-    save_dir = config.get("save_dir", "saved_models")
+@app.task()
+def train_regression_model(model_id: int, raw_config: dict):
+    try:
+        config = TrainConfig(**raw_config)
+        archi_info = raw_config["model_arch"]
+        training = get_training(model_id)
+        if training is None:
+            raise ValueError(f"Training with model_id {model_id} not found.")
 
-    # --- data prep ---
-    data_prep = DataPreparation(
-        csv_path, fraction=test_fraction, cleaning=cleaning, seed=seed
-    )
-    data_prep.read_data(sep=separator)
-    data_prep.split()
-    train_set, test_set = data_prep.get_train_test()
+        # --- data prep ---
+        data_prep = DataPreparation(
+            config.csv_path,
+            fraction=config.fraction,
+            cleaning=config.cleaning,
+            seed=config.seed,
+        )
+        data_prep.read_data(sep=config.separator)
+        data_prep.split()
+        train_set, test_set = data_prep.get_train_test()
 
-    train_ds = RegressionDataset(train_set, target_cols=target_columns)
-    test_ds = RegressionDataset(test_set, target_cols=target_columns)
+        train_ds = RegressionDataset(train_set, target_cols=config.target_columns)
+        test_ds = RegressionDataset(test_set, target_cols=config.target_columns)
 
-    train_ds.normalize()
-    test_ds.normalize()
+        train_ds.normalize()
+        test_ds.normalize()
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size)
+        train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True)
+        test_loader = DataLoader(test_ds, batch_size=config.batch_size)
 
-    # --- model handling---
-    model = create_model(archi_info)
-    device = torch.device(device)  # Could check if device is available
-    model.to(device)
+        # --- model handling---
+        model = create_model(archi_info)
+        device = torch.device(config.device)  # Could check if device is available
+        model.to(device)
 
-    loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        loss_fn = nn.MSELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
-    trainer = TrainerRegression(model, loss_fn, optimizer)
-    trainer.train(batch_size, train_loader, test_loader, epochs, device)
+        # --- "real" training ---
+        trainer = TrainerRegression(training, model, loss_fn, optimizer)
+        print("Ready to train")
+        training.status = TrainingStatusEnum.training
+        set_training(training)
+        trainer.train(
+            config.batch_size, train_loader, test_loader, config.epochs, device
+        )
+        training.status = TrainingStatusEnum.stopping
+        set_training(training)
+
+        # --- saving ---
+        os.makedirs(config.save_dir, exist_ok=True)
+
+        model_path = os.path.join(config.save_dir, "model.pt")
+        torch.save(model.state_dict(), model_path)
+
+        print(f"\nTraining complete. Model saved to: {model_path}")
+        training.status = TrainingStatusEnum.stopped
+        set_training(training)
+    except Exception as e:
+        print(f"Error during training: {e}")
+        training.status = TrainingStatusEnum.error
+        set_training(training)
+        raise e
