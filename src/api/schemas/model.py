@@ -11,6 +11,7 @@ from api.schemas.training import TrainingRead
 
 class ProblemTypeEnum(StrEnum):
     classification = "classification"
+    regression = "regression"
 
 
 class ModelBase(SQLModel, CamelModel):
