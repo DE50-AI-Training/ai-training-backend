@@ -1,3 +1,4 @@
+from typing import Union
 import pandas as pd
 
 
@@ -32,22 +33,41 @@ class DataPreparation:
             self.df = self.df.dropna()
             self.df = self.df.drop_duplicates()
         return self.df
+    
+    def select_input_columns(self, input_cols: list[int], target_cols: list[int] = []) -> None:
+        total_columns = len(self.df.columns)
+        all_indices = set(input_cols + target_cols)
 
-    def extract_cols(self, target_cols: list[int]) -> None:
-        if not all(0 <= idx < len(self.df.columns) for idx in target_cols):
-            raise ValueError("One or more indices in target_cols are out of range.")
+        if not all(0 <= idx < total_columns for idx in all_indices):
+            raise ValueError(
+                f"Invalid column indices: {sorted(all_indices)}. Total columns: {total_columns}"
+            )
 
-        # Convert indices to column names
-        self.target_cols = [self.df.columns[idx] for idx in target_cols]
+        self.input_cols = input_cols
+        self.target_cols_indices = target_cols
+
+    def extract_cols(self, target_cols: list[int] = None) -> None:
+        if target_cols is None:
+            target_cols = self.target_cols_indices
+
+        total_columns = len(self.df.columns)
+        if not all(0 <= idx < total_columns for idx in target_cols):
+            raise ValueError(
+                f"Invalid target column indices: {target_cols}. Total columns: {total_columns}"
+            )
+
+        # convertis les indices en noms de colonnes avant de modifier self.df
+        target_col_names = [self.df.columns[idx] for idx in target_cols]
+        input_col_names = [self.df.columns[idx] for idx in self.input_cols]
+
+        selected_columns = list(dict.fromkeys(input_col_names + target_col_names))  # garde l'ordre
+        self.df = self.df[selected_columns]
+        self.target_cols = target_col_names
 
         for col in self.target_cols:
-            self.classes[col] = [
-                str(x) if not isinstance(x, str) else x
-                for x in self.df[col].unique().tolist()
-            ]
-        self.df = pd.get_dummies(
-            self.df, columns=self.target_cols, prefix="", prefix_sep=""
-        )
+            self.classes[col] = self.df[col].astype(str).unique().tolist()
+
+        self.df = pd.get_dummies(self.df, columns=self.target_cols, prefix="", prefix_sep="")
 
     def split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         if not (0 < self.fraction <= 1):
@@ -69,6 +89,6 @@ class DataPreparation:
         return self.train_df, self.test_df
 
     def get_classes(self) -> dict:
-        if self.classes is None:
+        if not self.classes:
             raise ValueError("Classes are not initialized. Call extract_col() first.")
         return self.classes
