@@ -60,11 +60,8 @@ async def upload_dataset(
         for col in df.columns
     ]
 
-    # Update dataset_id for columns and insert them into the database
-    for column in columns:
-        column.dataset_id = dataset.id
-        session.add(column)
-
+    # Insert all columns into the database in one go
+    session.add_all(columns)
     session.commit()
     session.refresh(dataset)
 
