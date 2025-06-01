@@ -19,6 +19,7 @@ class ModelBase(SQLModel, CamelModel):
     input_columns: List[int]
     output_columns: List[int]
     problem_type: ProblemTypeEnum
+    training_fraction: float
 
 
 class ModelCreate(ModelBase):

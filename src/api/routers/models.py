@@ -94,6 +94,7 @@ async def create_model(
         input_columns=model.input_columns,
         output_columns=model.output_columns,
         mlp_architecture=mlp_architecture,
+        training_fraction=model.training_fraction,
         last_batch_size=32,
         last_max_epochs=10,
         last_learning_rate=0.001,
@@ -143,7 +144,7 @@ async def train_model(
         "learning_rate": training.learning_rate,
         "epochs": training.max_epochs,
         "batch_size": training.batch_size,
-        "fraction": 0.8,  # TODO: add fraction field to the model
+        "fraction": model.training_fraction,
         "cleaning": False,
         "seed": 42,
         "device": "cpu",

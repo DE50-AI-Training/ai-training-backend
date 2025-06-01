@@ -70,6 +70,7 @@ class Model(SQLModel, table=True):
             server_default=text("CURRENT_TIMESTAMP"),
         )
     )
+    training_fraction: float = Field(default=None, nullable=False)
     last_batch_size: int = Field(default=None, nullable=False)
     last_max_epochs: int = Field(default=None, nullable=False)
     last_learning_rate: float = Field(default=None, nullable=False)
@@ -91,9 +92,7 @@ class Dataset(SQLModel, table=True):
     name: str = Field(default=None, nullable=False)
     columns: List[str] = Field(default=[], sa_column=Column(JSON))
     row_count: int = Field(default=0, nullable=False)
-    unique_values_per_column: List[int] = Field(
-        default=[], sa_column=Column(JSON)
-    )
+    unique_values_per_column: List[int] = Field(default=[], sa_column=Column(JSON))
     created_at: Optional[datetime] = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
