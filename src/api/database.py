@@ -70,6 +70,7 @@ class Model(SQLModel, table=True):
             server_default=text("CURRENT_TIMESTAMP"),
         )
     )
+    training_fraction: float = Field(default=None, nullable=False)
     last_batch_size: int = Field(default=None, nullable=False)
     last_max_epochs: int = Field(default=None, nullable=False)
     last_learning_rate: float = Field(default=None, nullable=False)
