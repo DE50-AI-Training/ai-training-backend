@@ -30,7 +30,7 @@ class Model(nn.Module):
         # To be implemented with the DB
         torch.save(self.state_dict(), path)
         self.arch.set_model_weights_path(path)
-        self.arch.save(path.replace('.pth', '_arch.json'))
+        self.arch.save(path.replace('.pt', '.json'))
 
     
     def size(self) -> int:

@@ -244,7 +244,7 @@ def train_classification_model(model_id: int, raw_config: dict):
         os.makedirs(config.save_dir, exist_ok=True)
 
         model_path = os.path.join(config.save_dir, "model.pt")
-        torch.save(model.state_dict(), model_path)
+        model.save(model_path)
 
         print(f"\nTraining complete. Model saved to: {model_path}")
         training.status = TrainingStatusEnum.stopped
