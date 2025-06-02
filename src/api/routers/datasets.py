@@ -1,3 +1,4 @@
+import csv
 import io
 from os import makedirs
 
@@ -5,10 +6,9 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from sqlmodel import select
 
-from api.database import Dataset, SessionDep
+from api.database import Dataset, DatasetColumn, SessionDep
 from api.schemas.dataset import DatasetCreate, DatasetRead, DatasetTransformation
 from config import settings
-import csv
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -33,14 +33,10 @@ async def upload_dataset(
     sniffer = csv.Sniffer()
     delimiter = sniffer.sniff(content).delimiter
     df = pd.read_csv(io.StringIO(content), delimiter=delimiter)
-    columns = df.columns.tolist()
     row_count = df.shape[0]
-    unique_values_per_column=[df[col].nunique() for col in columns]
-    
+
     dataset = Dataset(
         name=file.filename,
-        columns=columns,
-        unique_values_per_column=unique_values_per_column,
         row_count=row_count,
         created_at=pd.Timestamp.now(),
         dataset_type="csv",
@@ -50,6 +46,22 @@ async def upload_dataset(
     )
 
     session.add(dataset)
+    session.commit()
+    session.refresh(dataset)
+
+    columns = [
+        DatasetColumn(
+            name=col,
+            type="categorical" if df[col].dtype == "object" else "numeric",
+            unique_values=df[col].nunique(),
+            null_count=int(df[col].isnull().sum()),
+            dataset_id=dataset.id,
+        )
+        for col in df.columns
+    ]
+
+    # Insert all columns into the database in one go
+    session.add_all(columns)
     session.commit()
     session.refresh(dataset)
 
