@@ -16,7 +16,7 @@ from sqlmodel import (
 )
 
 from api.schemas.architecture import ActivationEnum
-from api.schemas.dataset import DatasetTypeEnum
+from api.schemas.dataset import DatasetColumnTypeEnum, DatasetTypeEnum
 from api.schemas.model import ProblemTypeEnum
 from config import settings
 
@@ -85,15 +85,27 @@ class Model(SQLModel, table=True):
     # TODO: add validation to ensure that there can only be one architecture type per model
 
 
+class DatasetColumn(SQLModel, table=True):
+    __tablename__ = "dataset_column"
+    id: int = Field(default=None, primary_key=True)
+    name: str = Field(default=None, nullable=False)
+    type: DatasetColumnTypeEnum = Field(
+        default=None, sa_column=Column(Enum(DatasetColumnTypeEnum))
+    )
+    unique_values: int = Field(default=0, nullable=False)
+    null_count: int = Field(default=0, nullable=False)
+    dataset_id: int = Field(
+        default=None, foreign_key="dataset.id"
+    )  # Relation avec Dataset
+
+    dataset: Optional["Dataset"] = Relationship(back_populates="columns")
+
+
 class Dataset(SQLModel, table=True):
     __tablename__ = "dataset"
     id: int = Field(default=None, primary_key=True)
     name: str = Field(default=None, nullable=False)
-    columns: List[str] = Field(default=[], sa_column=Column(JSON))
     row_count: int = Field(default=0, nullable=False)
-    unique_values_per_column: List[int] = Field(
-        default=[], sa_column=Column(JSON)
-    )
     created_at: Optional[datetime] = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
@@ -105,3 +117,5 @@ class Dataset(SQLModel, table=True):
     original_file_name: str = Field(default=None, nullable=False)
     delimiter: str = Field(default=",", nullable=False)
     is_draft: Optional[bool] = Field(default=True, nullable=False)
+
+    columns: List[DatasetColumn] = Relationship(back_populates="dataset")

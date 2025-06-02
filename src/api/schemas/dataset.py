@@ -9,6 +9,20 @@ class DatasetTypeEnum(StrEnum):
     csv = "csv"
 
 
+class DatasetColumnTypeEnum(StrEnum):
+    numeric = "numeric"
+    categorical = "categorical"
+    image = "image"
+
+
+class DatasetColumn(SQLModel, CamelModel):
+    name: str
+    type: DatasetColumnTypeEnum
+    unique_values: int = 0
+    null_count: int = 0
+    dataset_id: int | None = None
+
+
 class DatasetBase(SQLModel, CamelModel):
     name: str
 
@@ -19,9 +33,8 @@ class DatasetCreate(DatasetBase):
 
 class DatasetRead(DatasetBase):
     id: int
-    columns: list[str]
+    columns: list[DatasetColumn]
     row_count: int
-    unique_values_per_column: list[int]
     created_at: datetime
     dataset_type: DatasetTypeEnum
     original_file_name: str
