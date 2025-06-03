@@ -32,6 +32,8 @@ class Model(nn.Module):
         self.arch.set_model_weights_path(path)
         self.arch.save(path.replace('.pth', '_arch.json'))
 
+    def load(self, path: str) -> None:
+        self.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
     
     def size(self) -> int:
         return sum(p.numel() for p in self.parameters())
