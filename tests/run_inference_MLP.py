@@ -14,9 +14,9 @@ df = pd.read_csv("tests/iris.csv")
 config = {
     "csv_path": "tests/iris.csv",
     "input_columns": [0, 1, 2, 3],
-    "column_name": ["result"],
-    "classification": True,  # Set to True for classification tasks
-    "classes": ["Iris-setosa", "Iris-versicolor", "Iris-virginica"],
+    "target_columns": [4],
+    "classification": True,
+    "classes": None,  # optionnel maintenant
     "separator": ",",
     "model_arch_path": "saved_models/iris_run5/model.json",
     "batch_size": 16,

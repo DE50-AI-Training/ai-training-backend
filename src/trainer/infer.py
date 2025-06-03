@@ -19,7 +19,7 @@ app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_url)
 class TrainConfig(SQLModel):
     csv_path: str
     input_columns: List[int]
-    column_name: List[str]
+    target_columns: List[int]
     classification: bool = False
     classes: Optional[List[str]] = None
     separator: str
@@ -56,66 +56,69 @@ def load_model(model_arch_path: str):
 
 @app.task()
 def infer_on_dataset(raw_config: dict):
-    # try:
-        config = TrainConfig(**raw_config)
+    config = TrainConfig(**raw_config)
 
-        data_prep = DataPreparation(
-            config.csv_path,
-            fraction=1.0,
-            cleaning=config.cleaning,
-            seed=config.seed,
-        )
+    data_prep = DataPreparation(
+        config.csv_path,
+        fraction=1.0,
+        cleaning=config.cleaning,
+        seed=config.seed,
+    )
 
-        data_prep.read_data(sep=config.separator)
-        # Assuming the column_name is a list of column names and exists in the DataFrame and are empty
-        # data_prep.select_input_columns(config.input_columns, config.column_name)
-        data_prep.split()
-        dataset, _ = data_prep.get_train_test()
-        original_data = dataset.copy()
-        dataset = dataset[[dataset.columns[idx] for idx in config.input_columns]]  # Select input columns and target column
-        dataset = dataset.to_numpy()
+    data_prep.read_data(sep=config.separator)
+    data_prep.split()
+    dataset, _ = data_prep.get_train_test()
+    original_data = dataset.copy()
 
-        dataset = InferenceDataset(dataset)
+    # Sélection des colonnes d'entrée
+    dataset = dataset[[dataset.columns[idx] for idx in config.input_columns]]
+    dataset = dataset.to_numpy()
 
-        dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=False)
-        model = load_model(config.model_arch_path)
-        model.eval()
-        print(f"Model loaded from {config.model_arch_path}")
+    dataset = InferenceDataset(dataset)
 
-        results = []
-        with torch.no_grad():
-            for batch in dataloader:
-                inputs = batch.float()  # Adjust based on input columns
-                outputs = model(inputs)                
-                results.append(outputs.cpu().numpy())
+    dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=False)
+    model = load_model(config.model_arch_path)
+    model.eval()
+    print(f"Model loaded from {config.model_arch_path}")
 
-        print(f"Inference completed. Saving results to {config.save_dir}/inference_results.csv")
+    results = []
+    with torch.no_grad():
+        for batch in dataloader:
+            inputs = batch.float()
+            outputs = model(inputs)
+            results.append(outputs.cpu().numpy())
 
-        # Combine all results
-        all_results = np.vstack(results)
-        
-        # Handle classification if specified
-        if config.classification and config.classes:
-            # Convert model outputs to class predictions
-            if all_results.shape[1] == len(config.classes):
-                # Multi-class classification - use argmax to get predicted class indices
-                predicted_indices = np.argmax(all_results, axis=1)
-                predicted_classes = [config.classes[idx] for idx in predicted_indices]
-                
-                # Create results DataFrame with original data and predictions
-                results_df = original_data.copy()
-                results_df['predicted_class'] = predicted_classes
+    print(f"Inference completed. Saving results to {config.save_dir}/inference_results.csv")
+
+    all_results = np.vstack(results)
+
+    results_df = original_data.copy()
+
+    if config.classification:
+        if all_results.shape[1] > 1:
+            predicted_indices = np.argmax(all_results, axis=1)
+
+            # Déduire les classes si non fournies
+            if config.classes:
+                class_names = config.classes
             else:
-                # Binary classification - just use the raw outputs
-                results_df = original_data.copy()
-                results_df['prediction'] = all_results.flatten()
-        else:
-            # Regression case - save original data with predictions
-            results_df = original_data.copy()
-            for i in range(all_results.shape[1]):
-                results_df[f'prediction_{i}'] = all_results[:, i]
-        
-        results_df.to_csv(f"{config.save_dir}/inference_results.csv", index=False)
+                target_col = original_data.columns[config.target_columns[0]]
+                class_names = sorted(original_data[target_col].unique().astype(str).tolist())
 
-    # except Exception as e:
-    #     print(f"Error during Inference: {e}")
+            predicted_classes = [class_names[idx] for idx in predicted_indices]
+            results_df["predicted_class"] = predicted_classes
+
+            # Comparaison avec la vérité terrain si disponible
+            if config.target_columns:
+                target_idx = config.target_columns[0]
+                target_col = original_data.columns[target_idx]
+                true_labels = results_df[target_col].astype(str).tolist()
+                acc = np.mean([p == t for p, t in zip(predicted_classes, true_labels)])
+                print(f"Inference accuracy: {acc * 100:.2f}% (based on column '{target_col}')")
+        else:
+            results_df["prediction"] = all_results.flatten()
+    else:
+        for i in range(all_results.shape[1]):
+            results_df[f"prediction_{i}"] = all_results[:, i]
+
+    results_df.to_csv(f"{config.save_dir}/inference_results.csv", index=False)

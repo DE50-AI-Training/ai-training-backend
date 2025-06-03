@@ -19,7 +19,7 @@ output_dim = df["variety"].nunique()
 
 training = TrainingRead(
     batch_size=16,
-    max_epochs=10,
+    max_epochs=1000,
     learning_rate=0.001,
     session_start=datetime.now(),
     training_time_at_start=0,
