@@ -172,7 +172,15 @@ def create_model(arch_dict: dict) -> Model:
         raise ValueError(
             f"Unsupported architecture: {arch_dict['architecture']}. Supported architectures are Currently MLP."
         )
-
+    
+def load_model_from_path(save_dir: str, model: Model) -> Model:
+    model_path = os.path.join(save_dir, "model.pt")
+    if os.path.exists(model_path):
+        print(f"Resuming training: loading weights from {model_path}")
+        model.load(model_path)
+    else:
+        print("Starting training from scratch.")
+    return model
 
 class TrainConfig(SQLModel):
     csv_path: str
@@ -225,6 +233,8 @@ def train_classification_model(model_id: int, raw_config: dict):
         model = create_model(archi_info)
         device = torch.device(config.device)  # Could check if device is available
         model.to(device)
+
+        model = load_model_from_path(config.save_dir, model)
 
         # --- cost/opti ---
         criterion = nn.CrossEntropyLoss()
@@ -293,6 +303,8 @@ def train_regression_model(model_id: int, raw_config: dict):
         loss_fn = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
+        model = load_model_from_path(config.save_dir, model)
+        
         # --- "real" training ---
         trainer = TrainerRegression(training, model, loss_fn, optimizer)
         print("Ready to train")
