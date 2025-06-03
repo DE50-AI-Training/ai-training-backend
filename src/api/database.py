@@ -82,8 +82,7 @@ class Model(SQLModel, table=True):
     )
 
     mlp_architecture: Optional[MLPArchitecture] = Relationship(back_populates="model")
-
-    # TODO: add validation to ensure that there can only be one architecture type per model
+    dataset: Optional["Dataset"] = Relationship(back_populates="models")
 
 
 class DatasetColumn(SQLModel, table=True):
@@ -119,4 +118,7 @@ class Dataset(SQLModel, table=True):
     delimiter: str = Field(default=",", nullable=False)
     is_draft: Optional[bool] = Field(default=True, nullable=False)
 
-    columns: List[DatasetColumn] = Relationship(back_populates="dataset")
+    columns: List[DatasetColumn] = Relationship(
+        back_populates="dataset", cascade_delete=True
+    )
+    models: List[Model] = Relationship(back_populates="dataset", cascade_delete=True)
