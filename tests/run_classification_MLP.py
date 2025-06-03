@@ -12,7 +12,7 @@ from api.schemas.training import TrainingRead, TrainingStatusEnum
 from trainer.trainer import train_classification_model
 
 # chargement du dataset + adaptation de la config
-df = pd.read_csv("tests/non_numeric_inputs.csv")
+df = pd.read_csv("tests/iris.csv")
 df = pd.get_dummies(df.iloc[:, [0, 1, 2]])
 input_dim = df.shape[1]
 output_dim = 3
@@ -33,17 +33,17 @@ training = TrainingRead(
 set_training(training)
 
 config = {
-    "csv_path": "tests/non_numeric_inputs.csv",
+    "csv_path": "tests/iris.csv",
     "separator": ",",
-    "target_columns": [3],
-    "input_columns": [0, 1,2],
+    "target_columns": [4],
+    "input_columns": [0, 1,2,3],
     # "image_column": None,
     # "model_class": MLP,
     "model_arch": {
         "architecture": "MLP",
-        "input_size": input_dim,
-        "output_size": output_dim,
-        "layers": [input_dim, 32, output_dim],
+        "input_size": 4,
+        "output_size": 3,
+        "layers": [4, 32, 3],
         "activation": "relu",
     },
     "learning_rate": training.learning_rate,
@@ -53,7 +53,7 @@ config = {
     "cleaning": False,
     "seed": 42,
     "device": "cpu",
-    "save_dir": "saved_models/test2",
+    "save_dir": "saved_models/iris_run",
 }
 
 train_classification_model(training.model_id, config)

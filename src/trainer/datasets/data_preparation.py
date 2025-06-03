@@ -91,7 +91,6 @@ class DataPreparation:
             col for col in self.df.columns if any(col.startswith(base_col) for base_col in all_categorical_cols) or col in input_col_names
         ]
         self.input_cols = [self.df.columns.get_loc(col) for col in new_input_col_names]
-        print(self.df.dtypes)
 
     def split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         if not (0 < self.fraction <= 1):

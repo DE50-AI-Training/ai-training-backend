@@ -82,7 +82,7 @@ class Trainer:
         print(
             f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f}\n"
         )
-        self.training.score = correct
+        self.training.accuracy = correct
 
     def train(
         self,
@@ -155,8 +155,8 @@ class TrainerRegression(Trainer):
 
         avg_loss = total_loss / num_batches
         avg_abs_error /= size
-        # print(f"AvgLoss: {avg_loss:>8f}, AvgAbsError: {avg_abs_error:.3f}%")
-        self.training.score = avg_abs_error
+        #print(f"AvgLoss: {avg_loss:>8f}, AvgAbsError: {avg_abs_error:.3f}%")
+        self.training.avg_abs_error = avg_abs_error
 
 
 def create_model(arch_dict: dict) -> Model:
