@@ -226,6 +226,13 @@ def train_classification_model(model_id: int, raw_config: dict):
         device = torch.device(config.device)  # Could check if device is available
         model.to(device)
 
+        model_path = os.path.join(config.save_dir, "model.pt")
+        if os.path.exists(model_path):
+            print(f"Resuming training: loading weights from {model_path}")
+            model.load_state_dict(torch.load(model_path))
+        else:
+            print("Starting training from scratch.")
+
         # --- cost/opti ---
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
@@ -293,6 +300,13 @@ def train_regression_model(model_id: int, raw_config: dict):
         loss_fn = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
+        model_path = os.path.join(config.save_dir, "model.pt")
+        if os.path.exists(model_path):
+            print(f"Resuming training: loading weights from {model_path}")
+            model.load_state_dict(torch.load(model_path))
+        else:
+            print("Starting training from scratch.")
+        
         # --- "real" training ---
         trainer = TrainerRegression(training, model, loss_fn, optimizer)
         print("Ready to train")
