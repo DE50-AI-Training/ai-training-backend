@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchprofile
+import os
 
 from trainer.architectures import Architecture
 
@@ -30,7 +31,8 @@ class Model(nn.Module):
         # To be implemented with the DB
         torch.save(self.state_dict(), path)
         self.arch.set_model_weights_path(path)
-        self.arch.save(path.replace('.pt', '.json'))
+        json_path = os.path.splitext(path)[0] + '.json'
+        self.arch.save(json_path)
 
     
     def size(self) -> int:

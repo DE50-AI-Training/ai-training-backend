@@ -27,5 +27,5 @@ config = {
     "image_column": None
 }
 
-infer_on_dataset(config)
+infer_on_dataset.run(config)
 # The inference results will be saved in the specified directory.
