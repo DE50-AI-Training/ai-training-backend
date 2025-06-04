@@ -14,7 +14,12 @@ from api.redis import (
     trainer_stop,
     update_training_status,
 )
-from api.schemas.model import ModelCreate, ModelUpdate, ModelWithArchitecture
+from api.schemas.model import (
+    ModelCreate,
+    ModelUpdate,
+    ModelWithArchitecture,
+    ProblemTypeEnum,
+)
 from api.schemas.training import TrainingRead, TrainingStart, TrainingStatusEnum
 from config import settings
 
@@ -89,6 +94,7 @@ async def create_model(
         input_columns=model.input_columns,
         output_columns=model.output_columns,
         mlp_architecture=mlp_architecture,
+        training_fraction=model.training_fraction,
         last_batch_size=32,
         last_max_epochs=10,
         last_learning_rate=0.001,
@@ -138,17 +144,24 @@ async def train_model(
         "learning_rate": training.learning_rate,
         "epochs": training.max_epochs,
         "batch_size": training.batch_size,
-        "fraction": 0.8,  # TODO: add fraction field to the model
+        "fraction": model.training_fraction,
         "cleaning": False,
         "seed": 42,
         "device": "cpu",
         "save_dir": f"{settings.storage_path}/models/{model_id}",
     }
-
-    celery_app.send_task(
-        "trainer.trainer.train_classification_model",
-        kwargs={"model_id": model_id, "raw_config": config},
-    )
+    if model.problem_type == ProblemTypeEnum.classification:
+        celery_app.send_task(
+            "trainer.trainer.train_classification_model",
+            kwargs={"model_id": model_id, "raw_config": config},
+        )
+    elif model.problem_type == ProblemTypeEnum.regression:
+        celery_app.send_task(
+            "trainer.trainer.train_regression_model",
+            kwargs={"model_id": model_id, "raw_config": config},
+        )
+    else:
+        raise ValueError(f"Unsupported problem type: {model.problem_type}")
     return training
 
 

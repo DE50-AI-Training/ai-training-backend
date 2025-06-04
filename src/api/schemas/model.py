@@ -11,6 +11,7 @@ from api.schemas.training import TrainingRead
 
 class ProblemTypeEnum(StrEnum):
     classification = "classification"
+    regression = "regression"
 
 
 class ModelBase(SQLModel, CamelModel):
@@ -18,6 +19,7 @@ class ModelBase(SQLModel, CamelModel):
     input_columns: List[int]
     output_columns: List[int]
     problem_type: ProblemTypeEnum
+    training_fraction: float
 
 
 class ModelCreate(ModelBase):
