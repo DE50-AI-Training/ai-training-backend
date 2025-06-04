@@ -159,7 +159,7 @@ class TrainerRegression(Trainer):
 
         avg_loss = total_loss / num_batches
         avg_abs_error /= size
-        print(f"AvgLoss: {avg_loss:>8f}, AvgAbsError: {avg_abs_error:.3f}%")
+        print(f"AvgLoss: {avg_loss:>8f}, AvgAbsError: {avg_abs_error:.3f}")
         self.training.avg_abs_error = avg_abs_error
 
 

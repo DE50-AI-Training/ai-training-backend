@@ -34,6 +34,7 @@ config = {
     "csv_path": "tests/babies.csv",
     "separator": ",",
     "target_columns": [0],
+    "input_columns": list(range(1, input_dim + 1)), 
     "model_arch": {
         "architecture": "MLP",
         "input_size": input_dim,
