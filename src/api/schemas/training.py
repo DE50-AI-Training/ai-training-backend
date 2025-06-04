@@ -30,7 +30,8 @@ class TrainingRead(TrainingBase):
     training_time_at_start: int
     status: TrainingStatusEnum
     model_id: int
-    score: Optional[float] = None
+    accuracy: Optional[float] = None
+    avg_abs_error: Optional[float] = None
 
     class Config:
         from_attributes = True

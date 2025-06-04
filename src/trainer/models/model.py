@@ -34,6 +34,8 @@ class Model(nn.Module):
         json_path = os.path.splitext(path)[0] + '.json'
         self.arch.save(json_path)
 
+    def load(self, path: str) -> None:
+        self.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
     
     def size(self) -> int:
         return sum(p.numel() for p in self.parameters())

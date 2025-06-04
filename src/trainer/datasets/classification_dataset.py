@@ -23,6 +23,6 @@ class ClassificationDataset(Dataset):
         return len(self.x)
 
     def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor]:
-        x = torch.tensor(self.x[idx], dtype=torch.float32)
+        x = torch.tensor(self.x[idx].astype(float), dtype=torch.float32)
         y = torch.tensor(self.y[idx], dtype=torch.float32)
         return x, y
