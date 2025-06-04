@@ -26,7 +26,7 @@ async def upload_dataset(
     session: SessionDep, file: UploadFile = File(...)
 ) -> DatasetRead:
     if not file.content_type.startswith("text/csv"):
-        raise ValueError("The file must be a CSV file")
+        raise HTTPException(status_code=400, detail="The file must be a CSV file")
 
     raw_content = await file.read()
     content = raw_content.decode("utf-8")
@@ -153,7 +153,7 @@ async def delete_dataset(dataset_id: int, session: SessionDep) -> None:
     dataset_path = f"{settings.storage_path}/datasets/{db_dataset.id}"
     if os.path.exists(dataset_path):
         shutil.rmtree(dataset_path)
-    
+
     # TODO: Delete the model files
 
     session.delete(db_dataset)
