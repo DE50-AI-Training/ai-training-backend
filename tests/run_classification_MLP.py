@@ -20,7 +20,7 @@ output_dim = 3
 
 training = TrainingRead(
     batch_size=16,
-    max_epochs=10,
+    max_epochs=1000,
     learning_rate=0.001,
     session_start=datetime.now(),
     training_time_at_start=0,
@@ -36,7 +36,7 @@ config = {
     "csv_path": "tests/iris.csv",
     "separator": ",",
     "target_columns": [4],
-    "input_columns": [0, 1,2,3],
+    "input_columns": [0, 1, 2, 3],
     # "image_column": None,
     # "model_class": MLP,
     "model_arch": {
