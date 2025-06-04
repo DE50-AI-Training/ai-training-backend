@@ -69,6 +69,29 @@ class DataPreparation:
 
         self.df = pd.get_dummies(self.df, columns=self.target_cols, prefix="", prefix_sep="")
 
+    def encode_categorical_inputs_as_dummies(self, force_categorical_cols: list[int] = None) -> None:
+        if self.df is None:
+            raise ValueError("Data not loaded. Call read_data() first.")
+
+        input_col_names = [self.df.columns[i] for i in self.input_cols]
+
+        auto_categorical_cols = [
+            col for col in input_col_names
+            if self.df[col].dtype == object or self.df[col].dtype.name == "category"
+        ]
+
+        forced_cols = force_categorical_cols or []
+        forced_col_names = [self.df.columns[self.input_cols[i]] for i in forced_cols if 0 <= i < len(self.input_cols)]
+
+        all_categorical_cols = list(set(auto_categorical_cols + forced_col_names))
+
+        self.df = pd.get_dummies(self.df, columns=all_categorical_cols, drop_first=False)
+
+        new_input_col_names = [
+            col for col in self.df.columns if any(col.startswith(base_col) for base_col in all_categorical_cols) or col in input_col_names
+        ]
+        self.input_cols = [self.df.columns.get_loc(col) for col in new_input_col_names]
+
     def split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         if not (0 < self.fraction <= 1):
             raise ValueError("Fraction must be between 0 and 1")

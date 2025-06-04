@@ -13,8 +13,9 @@ from trainer.trainer import train_classification_model
 
 # chargement du dataset + adaptation de la config
 df = pd.read_csv("tests/iris.csv")
-input_dim = df.drop(columns=["variety"]).shape[1]
-output_dim = df["variety"].nunique()
+df = pd.get_dummies(df.iloc[:, [0, 1, 2]])
+input_dim = df.shape[1]
+output_dim = 3
 
 
 training = TrainingRead(
@@ -52,7 +53,7 @@ config = {
     "cleaning": False,
     "seed": 42,
     "device": "cpu",
-    "save_dir": "saved_models/iris_run_resume",
+    "save_dir": "saved_models/iris_run",
 }
 
 train_classification_model(training.model_id, config)
