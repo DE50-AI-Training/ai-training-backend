@@ -11,6 +11,10 @@ class RegressionDataset(Dataset):
         super().__init__()
         self.x = df.drop(df.columns[target_cols], axis=1).to_numpy()
         self.y = df.iloc[:, target_cols].to_numpy()
+        if np.isnan(self.x).any():
+            col_means = np.nanmean(self.x, axis=0)
+            inds = np.where(np.isnan(self.x))
+            self.x[inds] = np.take(col_means, inds[1])
         self.dtype = dtype
 
     def get_x_y(self) -> tuple[np.ndarray, np.ndarray]:
