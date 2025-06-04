@@ -93,7 +93,7 @@ async def get_model_architecture(
 
     architecture = model.mlp_architecture
     if not architecture:
-        raise ValueError(f"Model with id {model_id} has no architecture defined.")
+        raise HTTPException(status_code=404, detail=f"Model with id {model_id} has no architecture defined.")
 
     # filter dataset columns to only include those used in the model
     input_columns = [model.dataset.columns[i].name for i in model.input_columns]
