@@ -60,6 +60,7 @@ async def upload_dataset(
             name=col,
             type="categorical" if df[col].dtype == "object" else "numeric",
             unique_values=df[col].nunique(),
+            classes=classes[col],
             null_count=int(df[col].isnull().sum()),
             dataset_id=dataset.id,
         )

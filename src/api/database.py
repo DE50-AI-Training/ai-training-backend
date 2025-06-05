@@ -93,6 +93,7 @@ class DatasetColumn(SQLModel, table=True):
         default=None, sa_column=Column(Enum(DatasetColumnTypeEnum))
     )
     unique_values: int = Field(default=0, nullable=False)
+    classes: List[str] = Field(default=[], nullable=False)
     null_count: int = Field(default=0, nullable=False)
     dataset_id: int = Field(
         default=None, foreign_key="dataset.id"
