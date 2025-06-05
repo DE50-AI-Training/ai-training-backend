@@ -1,6 +1,7 @@
 import csv
 import io
-from os import makedirs
+import os
+import shutil
 
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -25,7 +26,7 @@ async def upload_dataset(
     session: SessionDep, file: UploadFile = File(...)
 ) -> DatasetRead:
     if not file.content_type.startswith("text/csv"):
-        raise ValueError("The file must be a CSV file")
+        raise HTTPException(status_code=400, detail="The file must be a CSV file")
 
     raw_content = await file.read()
     content = raw_content.decode("utf-8")
@@ -66,8 +67,8 @@ async def upload_dataset(
     session.refresh(dataset)
 
     # On crée le dossier de stockage s'il n'existe pas
-    makedirs(f"{settings.storage_path}/datasets", exist_ok=True)
-    with open(f"{settings.storage_path}/datasets/{dataset.id}.csv", "wb") as f:
+    os.makedirs(f"{settings.storage_path}/datasets/{dataset.id}", exist_ok=True)
+    with open(f"{settings.storage_path}/datasets/{dataset.id}/dataset.csv", "wb") as f:
         f.write(raw_content)
 
     return dataset
@@ -97,3 +98,63 @@ async def create_dataset(
     session.refresh(db_dataset)
 
     return db_dataset
+
+
+@router.post("/{dataset_id}/duplicate")
+async def duplicate_dataset(dataset_id: int, session: SessionDep) -> DatasetRead:
+    db_dataset = session.get(Dataset, dataset_id)
+    if not db_dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    # Create a new dataset with the same properties
+    new_dataset = Dataset(
+        name=f"{db_dataset.name} (copy)",
+        row_count=db_dataset.row_count,
+        created_at=pd.Timestamp.now(),
+        dataset_type=db_dataset.dataset_type,
+        original_file_name=db_dataset.original_file_name,
+        delimiter=db_dataset.delimiter,
+        is_draft=True,
+    )
+
+    session.add(new_dataset)
+    session.commit()
+    session.refresh(new_dataset)
+
+    # Duplicate the columns
+    for column in db_dataset.columns:
+        new_column = DatasetColumn(
+            name=column.name,
+            type=column.type,
+            unique_values=column.unique_values,
+            null_count=column.null_count,
+            dataset_id=new_dataset.id,
+        )
+        session.add(new_column)
+
+    session.commit()
+
+    # Copy the dataset file to the new location
+    source_path = f"{settings.storage_path}/datasets/{db_dataset.id}/dataset.csv"
+    destination_path = f"{settings.storage_path}/datasets/{new_dataset.id}/dataset.csv"
+    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+    shutil.copy(source_path, destination_path)
+
+    return new_dataset
+
+
+@router.delete("/{dataset_id}")
+async def delete_dataset(dataset_id: int, session: SessionDep) -> None:
+    db_dataset = session.get(Dataset, dataset_id)
+    if not db_dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    # Delete the dataset from the filesystem
+    dataset_path = f"{settings.storage_path}/datasets/{db_dataset.id}"
+    if os.path.exists(dataset_path):
+        shutil.rmtree(dataset_path)
+
+    # TODO: Delete the model files
+
+    session.delete(db_dataset)
+    session.commit()

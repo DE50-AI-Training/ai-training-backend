@@ -29,3 +29,10 @@ class ArchitectureRead(ArchitectureBase):
 class MLPArchitectureRead(ArchitectureRead):
     activation: str
     layers: List[int]
+
+
+class MLPArchitectureExport(SQLModel):
+    activation: str
+    layers: List[int]
+    input_columns: List[str]
+    output_columns: List[str]

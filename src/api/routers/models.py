@@ -1,19 +1,16 @@
 import json
-import time
+import os
+import shutil
 from datetime import datetime
 
 from celery import Celery
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from sqlmodel import select
 
 from api.database import Dataset, MLPArchitecture, Model, SessionDep
-from api.redis import (
-    get_training,
-    redis,
-    set_training,
-    trainer_stop,
-    update_training_status,
-)
+from api.redis import get_training, redis, set_training, trainer_stop
+from api.schemas.architecture import MLPArchitectureExport
 from api.schemas.model import (
     ModelCreate,
     ModelUpdate,
@@ -70,8 +67,54 @@ async def get_trainings(session: SessionDep) -> list[TrainingRead]:
 async def get_model(model_id: int, session: SessionDep) -> ModelWithArchitecture:
     model = session.get(Model, model_id)
     if not model:
-        raise ValueError(f"Model with id {model_id} not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Model with id {model_id} not found."
+        )
     return model
+
+
+@router.get("/{model_id}/weights")
+async def get_model_weights(model_id: int, session: SessionDep) -> FileResponse:
+    model = session.get(Model, model_id)
+    if not model:
+        raise HTTPException(
+            status_code=404, detail=f"Model with id {model_id} not found."
+        )
+
+    weights_path = f"{settings.storage_path}/models/{model_id}/model.pt"
+    return FileResponse(
+        path=weights_path, media_type="application/octet-stream", filename="model.pt"
+    )
+
+
+@router.get("/{model_id}/architecture")
+async def get_model_architecture(
+    model_id: int, session: SessionDep
+) -> MLPArchitectureExport:
+    model = session.get(Model, model_id)
+    if not model:
+        raise HTTPException(
+            status_code=404, detail=f"Model with id {model_id} not found."
+        )
+
+    architecture = model.mlp_architecture
+    if not architecture:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model with id {model_id} has no architecture defined.",
+        )
+
+    # filter dataset columns to only include those used in the model
+    input_columns = [model.dataset.columns[i].name for i in model.input_columns]
+    output_columns = [model.dataset.columns[i].name for i in model.output_columns]
+
+    response = {
+        "activation": architecture.activation,
+        "layers": architecture.layers,
+        "input_columns": input_columns,
+        "output_columns": output_columns,
+    }
+    return response
 
 
 @router.post("/")
@@ -111,7 +154,9 @@ async def train_model(
     model_id: int, training_params: TrainingStart, session: SessionDep
 ) -> TrainingRead:
     if get_training(model_id):
-        raise ValueError(f"Training with model_id {model_id} already exists.")
+        raise HTTPException(
+            status_code=400, detail=f"Training with model_id {model_id} already exists."
+        )
     model = session.get(Model, model_id)
     dataset = session.get(Dataset, model.dataset_id)
 
@@ -130,7 +175,7 @@ async def train_model(
 
     layers = model.mlp_architecture.layers
     config = {
-        "csv_path": f"{settings.storage_path}/datasets/{model.dataset_id}.csv",
+        "csv_path": f"{settings.storage_path}/datasets/{model.dataset_id}/dataset.csv",
         "separator": dataset.delimiter,
         "target_columns": model.output_columns,
         "input_columns": model.input_columns,
@@ -161,7 +206,9 @@ async def train_model(
             kwargs={"model_id": model_id, "raw_config": config},
         )
     else:
-        raise ValueError(f"Unsupported problem type: {model.problem_type}")
+        raise HTTPException(
+            status_code=422, detail=f"Unsupported problem type: {model.problem_type}"
+        )
     return training
 
 
@@ -169,7 +216,10 @@ async def train_model(
 async def stop_model(model_id: int) -> None:
     training = get_training(model_id)
     if training is None:
-        raise ValueError(f"Training with model_id {model_id} not found. Cannot stop.")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Training with model_id {model_id} not found. Cannot stop.",
+        )
     if (
         training.status == TrainingStatusEnum.stopped
         or training.status == TrainingStatusEnum.stopped
@@ -191,5 +241,22 @@ async def update_model(model_id: int, model: ModelUpdate) -> ModelWithArchitectu
 
 
 @router.delete("/{model_id}")
-async def delete_model(model_id: int) -> None:
-    pass
+async def delete_model(model_id: int, session: SessionDep) -> None:
+    model = session.get(Model, model_id)
+
+    if not model:
+        raise HTTPException(
+            status_code=404, detail=f"Model with id {model_id} not found."
+        )
+
+    # Delete the model's weights file
+    model_path = f"{settings.storage_path}/models/{model_id}"
+    if os.path.exists(model_path):
+        shutil.rmtree(model_path)
+
+    # Delete the model from the database
+    session.delete(model)
+    session.commit()
+    redis.delete(f"training:{model_id}")
+    redis.delete(f"stop_signal:{model_id}")
+    return None

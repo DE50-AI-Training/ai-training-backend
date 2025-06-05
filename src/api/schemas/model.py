@@ -29,7 +29,7 @@ class ModelCreate(ModelBase):
     # TODO: add validation to ensure that there can only be one architecture type per model
 
 
-class ModelUpdate(ModelBase):
+class ModelUpdate(SQLModel, CamelModel):
     pass
 
 
