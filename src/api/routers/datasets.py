@@ -34,6 +34,11 @@ async def upload_dataset(
     sniffer = csv.Sniffer()
     delimiter = sniffer.sniff(content).delimiter
     df = pd.read_csv(io.StringIO(content), delimiter=delimiter)
+    
+    classes = {}
+    for col in df.columns:
+        classes[col] = sorted(df[col].astype(str).unique().tolist())
+
     row_count = df.shape[0]
 
     dataset = Dataset(
