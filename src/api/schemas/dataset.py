@@ -19,6 +19,7 @@ class DatasetColumn(SQLModel, CamelModel):
     name: str
     type: DatasetColumnTypeEnum
     unique_values: int = 0
+    classes: list[str] | None = None
     null_count: int = 0
     dataset_id: int | None = None
 
