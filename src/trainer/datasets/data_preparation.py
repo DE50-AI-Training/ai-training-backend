@@ -35,6 +35,9 @@ class DataPreparation:
         return self.df
     
     def select_input_columns(self, input_cols: list[int], target_cols: list[int] = []) -> None:
+        if len(target_cols) > 1:
+            raise ValueError("Only one target column is allowed for now")
+        
         total_columns = len(self.df.columns)
         all_indices = set(input_cols + target_cols)
 
@@ -65,7 +68,7 @@ class DataPreparation:
         self.target_cols = target_col_names
 
         for col in self.target_cols:
-            self.classes[col] = self.df[col].astype(str).unique().tolist()
+            self.classes[col] = sorted(self.df[col].astype(str).unique().tolist())
 
         self.df = pd.get_dummies(self.df, columns=self.target_cols, prefix="", prefix_sep="")
 
