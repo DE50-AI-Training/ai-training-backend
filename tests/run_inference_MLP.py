@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"
 
 import pandas as pd
 
-from trainer.infer import infer_on_dataset  
+from trainer.infer import infer_on_dataset
 
 # chargement du dataset + adaptation de la config
 df = pd.read_csv("tests/iris.csv")
@@ -24,7 +24,7 @@ config = {
     "seed": 42,
     "device": "cpu",
     "save_dir": "saved_models/iris_run5",
-    "image_column": None
+    "image_column": None,
 }
 
 infer_on_dataset.run(config)

@@ -1,35 +1,35 @@
-import torch
-from torch.utils.data import DataLoader, Dataset
-import pandas as pd
-import numpy as np
 import json
-from celery import Celery
+import os
+from typing import Any, Dict, List, Optional
 
-from typing import List, Dict, Any, Optional
+import numpy as np
+import pandas as pd
+import torch
+from celery import Celery
 from pydantic import Field
 from sqlmodel import SQLModel
+from torch.utils.data import DataLoader, Dataset
+
 from config import settings
-
-from trainer.trainer import create_model
 from trainer.datasets.data_preparation import DataPreparation
+from trainer.trainer import create_model, load_model_from_path
 
-app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_url)
 
-
-class TrainConfig(SQLModel):
+class InferConfig(SQLModel):
     csv_path: str
     input_columns: List[int]
     target_columns: List[int]
     classification: bool = False
     classes: Optional[List[str]] = None
     separator: str
-    model_arch_path: str
+    model_arch: Dict[str, Any]
     batch_size: int
     cleaning: bool = False
     seed: int = 42
     device: str = "cpu"
     save_dir: str = "saved_models"
     image_column: Optional[str] = None
+
 
 class InferenceDataset(Dataset):
     def __init__(self, data: np.ndarray, dtype: torch.dtype = torch.float32):
@@ -41,22 +41,11 @@ class InferenceDataset(Dataset):
 
     def __getitem__(self, idx):
         return torch.tensor(self.data[idx], dtype=self.dtype)
-    
-
-def load_model(model_arch_path: str):
-    with open(model_arch_path, 'r') as f:
-        arch = json.load(f)
-    model = create_model(arch)
-    if 'model_weights_path' in arch:
-        model.load_state_dict(torch.load(arch['model_weights_path'], map_location=torch.device('cpu')))
-    else:
-        raise ValueError("Model architecture JSON does not contain a valid key for model state.")
-    return model
 
 
-@app.task()
 def infer_on_dataset(raw_config: dict):
-    config = TrainConfig(**raw_config)
+    config = InferConfig(**raw_config)
+    archi_info = raw_config["model_arch"]
 
     data_prep = DataPreparation(
         config.csv_path,
@@ -77,9 +66,19 @@ def infer_on_dataset(raw_config: dict):
     dataset = InferenceDataset(dataset)
 
     dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=False)
-    model = load_model(config.model_arch_path)
-    model.eval()
-    print(f"Model loaded from {config.model_arch_path}")
+
+    model = create_model(archi_info)
+    device = torch.device(config.device)  # Could check if device is available
+    model.to(device)
+
+    model = load_model_from_path(config.save_dir, model)
+    print(f"Model loaded from {config.save_dir}/model.pt")
+
+    model = create_model(archi_info)
+    device = torch.device(config.device)  # Could check if device is available
+    model.to(device)
+
+    model = load_model_from_path(config.save_dir, model)
 
     results = []
     with torch.no_grad():
@@ -88,7 +87,9 @@ def infer_on_dataset(raw_config: dict):
             outputs = model(inputs)
             results.append(outputs.cpu().numpy())
 
-    print(f"Inference completed. Saving results to {config.save_dir}/inference_results.csv")
+    print(
+        f"Inference completed. Saving results to {config.save_dir}/inference_results.csv"
+    )
 
     all_results = np.vstack(results)
 
@@ -99,11 +100,7 @@ def infer_on_dataset(raw_config: dict):
             predicted_indices = np.argmax(all_results, axis=1)
 
             # Déduire les classes si non fournies
-            if config.classes:
-                class_names = config.classes
-            else:
-                target_col = original_data.columns[config.target_columns[0]]
-                class_names = sorted(original_data[target_col].unique().astype(str).tolist())
+            class_names = config.classes
 
             predicted_classes = [class_names[idx] for idx in predicted_indices]
             results_df["predicted_class"] = predicted_classes
@@ -114,11 +111,52 @@ def infer_on_dataset(raw_config: dict):
                 target_col = original_data.columns[target_idx]
                 true_labels = results_df[target_col].astype(str).tolist()
                 acc = np.mean([p == t for p, t in zip(predicted_classes, true_labels)])
-                print(f"Inference accuracy: {acc * 100:.2f}% (based on column '{target_col}')")
+                print(
+                    f"Inference accuracy: {acc * 100:.2f}% (based on column '{target_col}')"
+                )
         else:
             results_df["prediction"] = all_results.flatten()
     else:
         for i in range(all_results.shape[1]):
             results_df[f"prediction_{i}"] = all_results[:, i]
 
+    os.makedirs(config.save_dir, exist_ok=True)
+
     results_df.to_csv(f"{config.save_dir}/inference_results.csv", index=False)
+
+
+def infer_single_input(raw_config: dict, input_data: List[float]):
+    config = InferConfig(**raw_config)
+    archi_info = raw_config["model_arch"]
+
+    # Convert input data to tensor
+    input_tensor = torch.tensor([input_data], dtype=torch.float32)
+
+    # Load model
+    model = create_model(archi_info)
+    device = torch.device(config.device)
+    model.to(device)
+    model = load_model_from_path(config.save_dir, model)
+
+    model.eval()
+
+    # Perform inference
+    with torch.no_grad():
+        input_tensor = input_tensor.to(device)
+        output = model(input_tensor)
+        result = output.cpu().numpy()[0]  # Get first (and only) result
+
+    # Process result based on problem type
+    if config.classification:
+        predicted_index = np.argmax(result)
+
+        # Get class names
+        class_names = config.classes
+        predicted_class = class_names[predicted_index]
+
+        return {
+            "prediction": predicted_class,
+            "confidence": float(result[predicted_index]),
+        }
+    else:
+        return {"prediction": float(result[0])}

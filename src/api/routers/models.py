@@ -12,6 +12,7 @@ from api.database import Dataset, MLPArchitecture, Model, SessionDep
 from api.redis import get_training, redis, set_training, trainer_stop
 from api.schemas.architecture import MLPArchitectureExport
 from api.schemas.model import (
+    InferConfig,
     ModelCreate,
     ModelUpdate,
     ModelWithArchitecture,
@@ -19,6 +20,7 @@ from api.schemas.model import (
 )
 from api.schemas.training import TrainingRead, TrainingStart, TrainingStatusEnum
 from config import settings
+from trainer.infer import infer_on_dataset, infer_single_input
 
 router = APIRouter(prefix="/models", tags=["models"])
 celery_app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_url)
@@ -190,7 +192,7 @@ async def train_model(
         "epochs": training.max_epochs,
         "batch_size": training.batch_size,
         "fraction": model.training_fraction,
-        "cleaning": False,
+        "cleaning": model.problem_type == ProblemTypeEnum.regression,
         "seed": 42,
         "device": "cpu",
         "save_dir": f"{settings.storage_path}/models/{model_id}",
@@ -233,6 +235,106 @@ async def stop_model(model_id: int) -> None:
     trainer_stop(model_id)
     training.status = TrainingStatusEnum.stopping
     set_training(training)
+
+
+@router.post("/{model_id}/infer")
+async def infer_model(
+    model_id: int, session: SessionDep, params: InferConfig
+) -> FileResponse:
+    model = session.get(Model, model_id)
+    dataset = session.get(Dataset, params.dataset_id)
+    if not model:
+        raise HTTPException(
+            status_code=404, detail=f"Model with id {model_id} not found."
+        )
+    if not dataset:
+        raise HTTPException(
+            status_code=404, detail=f"Dataset with id {model.dataset_id} not found."
+        )
+
+    layers = model.mlp_architecture.layers
+    classes = (
+        dataset.columns[model.output_columns[0]].classes
+        if model.problem_type == ProblemTypeEnum.classification
+        else None
+    )
+
+    config = {
+        "csv_path": f"{settings.storage_path}/datasets/{params.dataset_id}/dataset.csv",
+        "separator": dataset.delimiter,
+        "target_columns": model.output_columns,
+        "input_columns": model.input_columns,
+        "classification": model.problem_type == ProblemTypeEnum.classification,
+        "classes": classes,
+        "batch_size": params.batch_size,
+        "model_arch": {
+            "architecture": "MLP",
+            "input_size": layers[0],
+            "output_size": layers[-1],
+            "layers": layers,
+            "activation": model.mlp_architecture.activation,
+        },
+        "cleaning": False,
+        "seed": 42,
+        "device": "cpu",
+        "save_dir": f"{settings.storage_path}/models/{model_id}",
+    }
+
+    infer_on_dataset(raw_config=config)  # TODO: switch to celery task ?
+
+    response_file = f"{settings.storage_path}/models/{model_id}/inference_results.csv"
+    if not os.path.exists(response_file):
+        raise HTTPException(
+            status_code=404, detail=f"Inference results for model {model_id} not found."
+        )
+    return FileResponse(
+        path=response_file, media_type="text/csv", filename="inference_results.csv"
+    )
+
+
+@router.post("/{model_id}/infer-single")
+async def infer_single_model(
+    model_id: int, input_data: list[float], session: SessionDep
+) -> dict:
+    model = session.get(Model, model_id)
+    if not model:
+        raise HTTPException(
+            status_code=404, detail=f"Model with id {model_id} not found."
+        )
+
+    layers = model.mlp_architecture.layers
+    classes = (
+        model.dataset.columns[model.output_columns[0]].classes
+        if model.problem_type == ProblemTypeEnum.classification
+        else None
+    )
+
+    config = {
+        "csv_path": "",  # Not needed for single input
+        "separator": "",  # Not needed for single input
+        "target_columns": model.output_columns,
+        "input_columns": model.input_columns,
+        "classification": model.problem_type == ProblemTypeEnum.classification,
+        "classes": classes,
+        "batch_size": 1,
+        "model_arch": {
+            "architecture": "MLP",
+            "input_size": layers[0],
+            "output_size": layers[-1],
+            "layers": layers,
+            "activation": model.mlp_architecture.activation,
+        },
+        "cleaning": False,
+        "seed": 42,
+        "device": "cpu",
+        "save_dir": f"{settings.storage_path}/models/{model_id}",
+    }
+
+    try:
+        result = infer_single_input(raw_config=config, input_data=input_data)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
 
 
 @router.put("/{model_id}")

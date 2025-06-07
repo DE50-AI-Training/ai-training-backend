@@ -6,17 +6,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from celery import Celery
-from pydantic import Field, field_validator
+from pydantic import Field
 from sqlmodel import SQLModel
 from torch.utils.data import DataLoader
 
-from api.redis import (
-    get_training,
-    redis,
-    set_training,
-    trainer_should_stop,
-    update_training_status,
-)
+from api.redis import get_training, set_training, trainer_should_stop
 from api.schemas.training import TrainingRead, TrainingStatusEnum
 from config import settings
 from trainer.architectures import Architecture, MLPArchitecture
@@ -163,7 +157,6 @@ class TrainerRegression(Trainer):
         self.training.avg_abs_error = avg_abs_error
 
 
-
 def create_model(arch_dict: dict) -> Model:
     if "architecture" not in arch_dict:
         raise ValueError("Architecture type is required")
@@ -173,15 +166,17 @@ def create_model(arch_dict: dict) -> Model:
         raise ValueError(
             f"Unsupported architecture: {arch_dict['architecture']}. Supported architectures are Currently MLP."
         )
-    
+
+
 def load_model_from_path(save_dir: str, model: Model) -> Model:
     model_path = os.path.join(save_dir, "model.pt")
     if os.path.exists(model_path):
-        print(f"Resuming training: loading weights from {model_path}")
+        print(f"Loaded weights from {model_path}")
         model.load(model_path)
     else:
         print("Starting training from scratch.")
     return model
+
 
 class TrainConfig(SQLModel):
     csv_path: str
@@ -221,7 +216,7 @@ def train_classification_model(model_id: int, raw_config: dict):
         data_prep.select_input_columns(config.input_columns, config.target_columns)
         data_prep.extract_cols(config.target_columns)
         data_prep.encode_categorical_inputs_as_dummies()
-        
+
         data_prep.split()
         train_set, test_set = data_prep.get_train_test()
         classes = data_prep.get_classes()
@@ -307,7 +302,7 @@ def train_regression_model(model_id: int, raw_config: dict):
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
         model = load_model_from_path(config.save_dir, model)
-        
+
         # --- "real" training ---
         trainer = TrainerRegression(training, model, loss_fn, optimizer)
         print("Ready to train")
