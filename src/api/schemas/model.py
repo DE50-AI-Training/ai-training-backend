@@ -49,3 +49,8 @@ class ModelRead(ModelBase):
 
 class ModelWithArchitecture(ModelRead):
     mlp_architecture: Optional[MLPArchitectureRead] = None
+
+
+class InferConfig(SQLModel, CamelModel):
+    dataset_id: int
+    batch_size: int
