@@ -11,14 +11,22 @@ from trainer.infer import infer_on_dataset
 # chargement du dataset + adaptation de la config
 df = pd.read_csv("tests/iris.csv")
 
-config = {
+from trainer.infer import InferConfig
+
+raw_config = {
     "csv_path": "tests/iris.csv",
     "input_columns": [0, 1, 2, 3],
     "target_columns": [4],
     "classification": True,
-    "classes": None,  # optionnel maintenant
+    "classes": ["Setosa", "Versicolor", "Virginica"],
     "separator": ",",
-    "model_arch_path": "saved_models/iris_run5/model.json",
+    "model_arch": {
+        "architecture": "MLP",
+        "input_size": 4,
+        "output_size": 3,
+        "layers": [4, 32, 3],
+        "activation": "relu",
+    },
     "batch_size": 16,
     "cleaning": False,
     "seed": 42,
@@ -27,5 +35,5 @@ config = {
     "image_column": None,
 }
 
-infer_on_dataset.run(config)
+infer_on_dataset(raw_config)
 # The inference results will be saved in the specified directory.
