@@ -36,6 +36,25 @@ class InferenceDataset(Dataset):
         self.data = data
         self.dtype = dtype
 
+    def normalize(self) -> None:
+        """
+        Normalize the dataset features (x): only normalize columns that are not boolean.
+        A column is considered boolean if it contains exactly 2 unique values.
+        Same logic as RegressionDataset but with fixed axis handling.
+        """
+        # Check each column to see if it's boolean-like (has exactly 2 unique values)
+        for col in range(self.data.shape[1]):
+            unique_values = np.unique(self.data[:, col])            
+            # If the column has more than 2 unique values, normalize it
+            if len(unique_values) > 2:
+                col_mean = np.mean(self.data[:, col])
+                col_std = np.std(self.data[:, col])
+                
+                # Avoid division by zero
+                if col_std > 0:
+                    self.data[:, col] = (self.data[:, col] - col_mean) / col_std
+
+
     def __len__(self):
         return len(self.data)
 
@@ -50,7 +69,7 @@ def infer_on_dataset(raw_config: dict):
     data_prep = DataPreparation(
         config.csv_path,
         fraction=1.0,
-        cleaning=config.cleaning,
+        cleaning=True,
         seed=config.seed,
     )
 
@@ -64,6 +83,12 @@ def infer_on_dataset(raw_config: dict):
     dataset = dataset.to_numpy()
 
     dataset = InferenceDataset(dataset)
+    print(dataset[0])  # Print first item for debugging
+    if not config.classification:
+        # For regression, normalize the input
+        dataset.normalize()
+    print(dataset[0])  # Print first item for debugging
+
 
     dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=False)
 
@@ -131,6 +156,10 @@ def infer_single_input(raw_config: dict, input_data: List[float]):
 
     # Convert input data to tensor
     input_tensor = torch.tensor([input_data], dtype=torch.float32)
+    #Todo: apply a normalization if needed
+    if not config.classification:
+        # For regression, normalize the input
+        input_tensor = (input_tensor - input_tensor.mean(dim=0)) / input_tensor.std(dim=0)
 
     # Load model
     model = create_model(archi_info)
