@@ -42,26 +42,18 @@ class InferenceDataset(Dataset):
         A column is considered boolean if it contains exactly 2 unique values.
         Same logic as RegressionDataset but with fixed axis handling.
         """
-        print(f"Data shape before normalization: {self.data.shape}")
         # Check each column to see if it's boolean-like (has exactly 2 unique values)
         for col in range(self.data.shape[1]):
-            unique_values = np.unique(self.data[:, col])
-            print(f"Column {col}: {len(unique_values)} unique values: {unique_values[:5]}...")  # Show first 5
-            
+            unique_values = np.unique(self.data[:, col])            
             # If the column has more than 2 unique values, normalize it
             if len(unique_values) > 2:
                 col_mean = np.mean(self.data[:, col])
                 col_std = np.std(self.data[:, col])
-                print(f"  Normalizing column {col}: mean={col_mean:.4f}, std={col_std:.4f}")
                 
                 # Avoid division by zero
                 if col_std > 0:
                     self.data[:, col] = (self.data[:, col] - col_mean) / col_std
-                    print(f"  After normalization: mean={np.mean(self.data[:, col]):.4f}, std={np.std(self.data[:, col]):.4f}")
-                else:
-                    print(f"  Column {col} has zero std, skipping normalization")
-            else:
-                print(f"  Column {col} is boolean-like, skipping normalization")
+
 
     def __len__(self):
         return len(self.data)
