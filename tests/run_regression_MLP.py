@@ -29,7 +29,7 @@ training = TrainingRead(
 
 # Needs redis to be running
 set_training(training)
-
+# Simulation de l'entraînement d'un modèle de régression MLP
 config = {
     "csv_path": "tests/babies.csv",
     "separator": ",",

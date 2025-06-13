@@ -13,6 +13,7 @@ df = pd.read_csv("tests/iris.csv")
 
 from trainer.infer import InferConfig
 
+# Simulation de l'inférence d'un modèle de classification MLP
 raw_config = {
     "csv_path": "tests/iris.csv",
     "input_columns": [0, 1, 2, 3],
