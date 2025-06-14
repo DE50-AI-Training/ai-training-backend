@@ -57,11 +57,18 @@ database.db
 
 # Test files
 tests/
-*.csv
-
 # Documentation
 README.md
 
 # Temporary files
 temp/
 tmp/
+
+# Additional optimizations
+database.db
+storage
+*.pt
+*.pth
+*.csv
+*.json
+*.venv

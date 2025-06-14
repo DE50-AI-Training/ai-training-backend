@@ -24,17 +24,20 @@ RUN pip install poetry==1.7.1
 # Copy Poetry configuration files
 COPY pyproject.toml poetry.lock* ./
 
-# Configure poetry: Don't create virtual env (we're in container), don't ask for confirmation
-RUN poetry config virtualenvs.create false \
-    && poetry config virtualenvs.in-project false
+# Configure poetry to avoid virtual environments
+ENV POETRY_VIRTUALENVS_CREATE=false
 
-# Install dependencies
+# Install dependencies (without ML libraries)
 RUN poetry install --only=main --no-interaction --no-ansi
+
+# Install PyTorch CPU-only version (lighter than full PyTorch)
+RUN pip install torch==2.6.0+cpu torchvision==0.21.0+cpu --index-url https://download.pytorch.org/whl/cpu
+
+# Install torchprofile
+RUN pip install torchprofile==0.0.4
 
 # Copy source code
 COPY src/ src/
-COPY storage/ storage/
-COPY README.md .
 
 # Create necessary directories and set permissions
 RUN mkdir -p storage/datasets storage/models && \
