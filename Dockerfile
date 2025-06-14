@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONPATH=/app/src
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -39,6 +40,10 @@ RUN pip install torchprofile==0.0.4
 # Copy source code
 COPY src/ src/
 
+# Copy startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Create necessary directories and set permissions
 RUN mkdir -p storage/datasets storage/models && \
     chown -R appuser:appuser /app
@@ -50,4 +55,4 @@ USER appuser
 EXPOSE 8000
 
 # Default command to run both API and celery worker
-CMD ["sh", "-c", "celery -A trainer.trainer.app worker --loglevel=info --detach && python -m uvicorn api.main:app --host 0.0.0.0 --port 8000"]
+CMD ["/app/start.sh"]
