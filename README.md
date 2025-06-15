@@ -1,6 +1,6 @@
 - Install and launch Redis (e.g. `docker pull redis && docker run -d --restart unless-stopped -p 6379:6379 redis`)
 - Install poetry
-- Run `poetry install`
+- Run `poetry install --with ml,dev`
 - Create and edit `.env` file from `.env.example`
 - Run the project `poetry run start-dev`
 - Run celery workers from the poetry venv `celery -A trainer.trainer.app worker -l INFO`
