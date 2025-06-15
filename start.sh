@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Démarrer Celery worker en arrière-plan
-cd /app/srcAdd commentMore actions
+cd /app/src
 celery -A trainer.trainer:app worker --loglevel=info &
 
 # Démarrer FastAPI
