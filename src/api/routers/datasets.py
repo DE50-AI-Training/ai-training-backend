@@ -1,166 +1,152 @@
-import csv
-import io
-import os
-import shutil
+from fastapi import APIRouter, File, UploadFile
 
-import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from sqlmodel import select
-
-from api.database import Dataset, DatasetColumn, SessionDep
+from api.database import SessionDep
 from api.schemas.dataset import DatasetCreate, DatasetRead, DatasetTransformation
-from config import settings
+from api.services.dataset_service import DatasetService
 
-router = APIRouter(prefix="/datasets", tags=["datasets"])
+router = APIRouter(
+    prefix="/datasets",
+    tags=["Datasets"],
+)
 
 
-@router.get("/")
+@router.get(
+    "/",
+    summary="Retrieve all datasets",
+    description="Returns the list of all finalized datasets (non-drafts) available in the system.",
+    response_description="List of datasets with their metadata and columns",
+)
 async def get_datasets(session: SessionDep) -> list[DatasetRead]:
-    statement = select(Dataset).where(Dataset.is_draft == False)
-    datasets = session.exec(statement).all()
-    return datasets
+    """
+    Retrieves all finalized datasets.
+
+    - **Automatically filters** draft datasets
+    - **Includes metadata**: row count, type, creation date
+    - **Includes columns**: name, type, unique values, possible classes
+    """
+    return DatasetService.get_all_datasets(session)
 
 
-@router.post("/")
+@router.post(
+    "/",
+    summary="Upload a new dataset",
+    description="Upload a CSV file and create a dataset in draft mode. The file is automatically analyzed to detect column types and metadata.",
+    response_description="Dataset created in draft mode with all its metadata",
+    status_code=201,
+)
 async def upload_dataset(
-    session: SessionDep, file: UploadFile = File(...)
+    session: SessionDep,
+    file: UploadFile = File(
+        ...,
+        description="CSV file to upload. Must have .csv extension and text/csv content-type",
+    ),
 ) -> DatasetRead:
-    if not file.content_type.startswith("text/csv"):
-        raise HTTPException(status_code=400, detail="The file must be a CSV file")
+    """
+    Upload and analyze a CSV file to create a new dataset.
 
-    raw_content = await file.read()
-    content = raw_content.decode("utf-8")
+    **Automatic process:**
+    - Automatic CSV delimiter detection
+    - Column type analysis (numeric/categorical)
+    - Statistics calculation (unique values, null values)
+    - Class extraction for categorical variables
+    - Secure file storage
 
-    sniffer = csv.Sniffer()
-    delimiter = sniffer.sniff(content).delimiter
-    df = pd.read_csv(io.StringIO(content), delimiter=delimiter)
-    
-    classes = {}
-    for col in df.columns:
-        classes[col] = sorted(df[col].astype(str).unique().tolist())
+    **The dataset is created in draft mode** and must be finalized with POST /{dataset_id}
 
-    row_count = df.shape[0]
-
-    dataset = Dataset(
-        name=file.filename,
-        row_count=row_count,
-        created_at=pd.Timestamp.now(),
-        dataset_type="csv",
-        original_file_name=file.filename,
-        delimiter=delimiter,
-        is_draft=True,
-    )
-
-    session.add(dataset)
-    session.commit()
-    session.refresh(dataset)
-
-    columns = [
-        DatasetColumn(
-            name=col,
-            type="categorical" if df[col].dtype == "object" else "numeric",
-            unique_values=df[col].nunique(),
-            classes=classes[col],
-            null_count=int(df[col].isnull().sum()),
-            dataset_id=dataset.id,
-        )
-        for col in df.columns
-    ]
-
-    # Insert all columns into the database in one go
-    session.add_all(columns)
-    session.commit()
-    session.refresh(dataset)
-
-    # On crée le dossier de stockage s'il n'existe pas
-    os.makedirs(f"{settings.storage_path}/datasets/{dataset.id}", exist_ok=True)
-    with open(f"{settings.storage_path}/datasets/{dataset.id}/dataset.csv", "wb") as f:
-        f.write(raw_content)
-
-    return dataset
+    **Supported formats:** CSV with delimiters: comma, semicolon, tab
+    """
+    return await DatasetService.upload_dataset(session, file)
 
 
-@router.put("/{dataset_id}")
+@router.put(
+    "/{dataset_id}",
+    summary="Transform a dataset",
+    description="Apply transformations to an existing dataset (feature under development).",
+    response_description="Transformed dataset",
+)
 async def transform_dataset(
     dataset_id: int, transformation: DatasetTransformation
 ) -> DatasetRead:
-    # On va chercher le dataset, on effectue la transformation et on le remplace dans le fs
-    pass
+    """
+    Apply transformations to an existing dataset.
+
+    **🚧 Feature under development**
+
+    **Planned transformations:**
+    - Numeric data normalization
+    - Categorical variable encoding
+    - Missing value handling
+    - Row/column filtering
+    """
+    return DatasetService.transform_dataset(dataset_id, transformation)
 
 
-@router.post("/{dataset_id}")
+@router.post(
+    "/{dataset_id}",
+    summary="Finalize a draft dataset",
+    description="Finalizes a dataset in draft mode by giving it a definitive name and making it usable for training.",
+    response_description="Finalized dataset ready for use",
+)
 async def create_dataset(
     dataset_id: int, dataset: DatasetCreate, session: SessionDep
 ) -> DatasetRead:
+    """
+    Finalizes a draft dataset to make it usable.
 
-    db_dataset = session.get(Dataset, dataset_id)
-    if not db_dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-    db_dataset.name = dataset.name
-    db_dataset.is_draft = False
+    **Actions performed:**
+    - Assignment of definitive name
+    - Status change from draft to finalized
+    - Dataset becomes available for model creation
 
-    session.add(db_dataset)
-    session.commit()
-    session.refresh(db_dataset)
-
-    return db_dataset
+    **Prerequisites:** Dataset must exist and be in draft mode
+    """
+    return DatasetService.finalize_dataset(dataset_id, dataset, session)
 
 
-@router.post("/{dataset_id}/duplicate")
+@router.post(
+    "/{dataset_id}/duplicate",
+    summary="Duplicate a dataset",
+    description="Creates a complete copy of an existing dataset, including its data and metadata.",
+    response_description="New dataset (copy) created in draft mode",
+    status_code=201,
+)
 async def duplicate_dataset(dataset_id: int, session: SessionDep) -> DatasetRead:
-    db_dataset = session.get(Dataset, dataset_id)
-    if not db_dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
+    """
+    Duplicates an existing dataset with all its data.
 
-    # Create a new dataset with the same properties
-    new_dataset = Dataset(
-        name=f"{db_dataset.name} (copy)",
-        row_count=db_dataset.row_count,
-        created_at=pd.Timestamp.now(),
-        dataset_type=db_dataset.dataset_type,
-        original_file_name=db_dataset.original_file_name,
-        delimiter=db_dataset.delimiter,
-        is_draft=True,
-    )
+    **Copied elements:**
+    - Original CSV file
+    - All metadata (columns, types, statistics)
+    - Structure and configuration
 
-    session.add(new_dataset)
-    session.commit()
-    session.refresh(new_dataset)
-
-    # Duplicate the columns
-    for column in db_dataset.columns:
-        new_column = DatasetColumn(
-            name=column.name,
-            type=column.type,
-            unique_values=column.unique_values,
-            null_count=column.null_count,
-            dataset_id=new_dataset.id,
-        )
-        session.add(new_column)
-
-    session.commit()
-
-    # Copy the dataset file to the new location
-    source_path = f"{settings.storage_path}/datasets/{db_dataset.id}/dataset.csv"
-    destination_path = f"{settings.storage_path}/datasets/{new_dataset.id}/dataset.csv"
-    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-    shutil.copy(source_path, destination_path)
-
-    return new_dataset
+    **Name is automatically suffixed** with " (copy)"
+    **Copy is created in draft mode** and can be renamed
+    **Use cases:** Experimentation, backup, multiple versions
+    """
+    return DatasetService.duplicate_dataset(dataset_id, session)
 
 
-@router.delete("/{dataset_id}")
+@router.delete(
+    "/{dataset_id}",
+    summary="Delete a dataset",
+    description="Permanently deletes a dataset and all its associated files. This action is irreversible.",
+    response_description="Deletion confirmed",
+    status_code=204,
+)
 async def delete_dataset(dataset_id: int, session: SessionDep) -> None:
-    db_dataset = session.get(Dataset, dataset_id)
-    if not db_dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
+    """
+    Permanently deletes a dataset and its data.
 
-    # Delete the dataset from the filesystem
-    dataset_path = f"{settings.storage_path}/datasets/{db_dataset.id}"
-    if os.path.exists(dataset_path):
-        shutil.rmtree(dataset_path)
+    **⚠️ WARNING: Irreversible action!**
 
-    # TODO: Delete the model files
+    **Deleted elements:**
+    - Dataset CSV file
+    - Database metadata
+    - Complete storage folder
+    - All associated columns
 
-    session.delete(db_dataset)
-    session.commit()
+    **TODO:** Delete models using this dataset
+
+    **Prerequisites:** Dataset must not be used by active models
+    """
+    DatasetService.delete_dataset(dataset_id, session)
