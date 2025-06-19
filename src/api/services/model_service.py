@@ -25,7 +25,15 @@ from trainer.infer import infer_on_dataset, infer_single_input
 
 
 class ModelService:
-    """Service layer for model management"""
+    """
+    Service layer for machine learning model management.
+    
+    Handles the complete lifecycle of ML models:
+    - Model creation and configuration
+    - Training orchestration via Celery
+    - Inference on datasets and single inputs
+    - Model persistence and file management
+    """
 
     def __init__(self, celery_app: Celery):
         self.celery_app = celery_app
@@ -46,10 +54,12 @@ class ModelService:
                 data["model_id"] = int(key.split(":")[1])
                 training_data = TrainingRead.model_validate(data)
 
+                # Auto-cleanup: Move completed training stats to model
                 if training_data.status == TrainingStatusEnum.stopped:
                     # TODO: Move this to another endpoint called by trainer
                     model = session.get(Model, training_data.model_id)
                     if model:
+                        # Update model with training session results
                         model.last_batch_size = training_data.batch_size
                         model.last_max_epochs = training_data.max_epochs
                         model.last_learning_rate = training_data.learning_rate
@@ -63,6 +73,7 @@ class ModelService:
                         session.commit()
                         session.refresh(model)
 
+                    # Clean up Redis entry for completed training
                     redis.delete(key)
                 else:
                     trainings.append(training_data)
@@ -109,7 +120,7 @@ class ModelService:
                 detail=f"Model with id {model_id} has no architecture defined.",
             )
 
-        # Filter dataset columns to only include those used in the model
+        # Map column indices to human-readable names
         input_columns = [model.dataset.columns[i].name for i in model.input_columns]
         output_columns = [model.dataset.columns[i].name for i in model.output_columns]
 
@@ -165,6 +176,7 @@ class ModelService:
         model = session.get(Model, model_id)
         dataset = session.get(Dataset, model.dataset_id)
 
+        # Initialize training session in Redis
         training = TrainingRead(
             batch_size=training_params.batch_size,
             max_epochs=training_params.max_epochs,
@@ -178,6 +190,7 @@ class ModelService:
 
         set_training(training)
 
+        # Build configuration for trainer worker
         layers = model.mlp_architecture.layers
         config = {
             "csv_path": f"{settings.storage_path}/datasets/{model.dataset_id}/dataset.csv",
@@ -201,6 +214,7 @@ class ModelService:
             "save_dir": f"{settings.storage_path}/models/{model_id}",
         }
 
+        # Dispatch training task based on problem type
         if model.problem_type == ProblemTypeEnum.classification:
             self.celery_app.send_task(
                 "trainer.trainer.train_classification_model",
@@ -260,12 +274,14 @@ class ModelService:
             )
 
         layers = model.mlp_architecture.layers
+        # Extract class names for classification problems
         classes = (
             dataset.columns[model.output_columns[0]].classes
             if model.problem_type == ProblemTypeEnum.classification
             else None
         )
 
+        # Build inference configuration
         config = {
             "csv_path": f"{settings.storage_path}/datasets/{params.dataset_id}/dataset.csv",
             "separator": dataset.delimiter,
@@ -287,6 +303,7 @@ class ModelService:
             "save_dir": f"{settings.storage_path}/models/{model_id}",
         }
 
+        # Execute inference and return results file
         infer_on_dataset(raw_config=config)
 
         response_file = (
