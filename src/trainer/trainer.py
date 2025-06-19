@@ -23,6 +23,17 @@ app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_url)
 
 
 class Trainer:
+    """
+    Base class for training neural network models.
+    This class provides methods for training and testing the model, handling
+    the training loop, and saving the model.
+    Attributes:
+        training (TrainingRead): Training session metadata.
+        model (Model): The neural network model to be trained.
+        loss_fn (nn.Module): Loss function used for training.
+        optimizer (torch.optim.Optimizer): Optimizer used for updating model weights.
+    """
+
     def __init__(
         self,
         training: TrainingRead,
@@ -30,6 +41,14 @@ class Trainer:
         loss_fn: nn.Module,
         optimizer: torch.optim.Optimizer,
     ) -> None:
+        """
+        Initializes the Trainer with training metadata, model, loss function, and optimizer.
+        :param training: Training session metadata.
+        :param model: The neural network model to be trained.
+        :param loss_fn: Loss function used for training.
+        :param optimizer: Optimizer used for updating model weights.
+        """
+
         self.training = training
         self.model = model
         self.loss_fn = loss_fn
@@ -37,6 +56,14 @@ class Trainer:
         should_stop = False
 
     def train_loop(self, dataloader: DataLoader, device: torch.device) -> None:
+        """
+        Runs a single training loop over the provided DataLoader.
+        :param dataloader: DataLoader providing batches of training data.
+        :param device: Device (CPU or GPU) on which to perform training.
+        This method iterates over the DataLoader, computes predictions, calculates loss,
+        performs backpropagation, and updates the model weights.
+        """
+
         self.model.to(device)
         self.model.train()
         for batch, (X, y) in enumerate(dataloader):
@@ -53,6 +80,15 @@ class Trainer:
             self.optimizer.zero_grad()
 
     def test_loop(self, dataloader: DataLoader, device: torch.device):
+        """
+        Runs a single test loop over the provided DataLoader.
+        :param dataloader: DataLoader providing batches of test data.
+        :param device: Device (CPU or GPU) on which to perform testing.
+        This method evaluates the model on the test dataset, computes the average loss,
+        and calculates the accuracy for classification tasks.
+        It prints the test results, including accuracy and average loss.
+        """
+
         self.model.to(device)
         self.model.eval()
         size = len(dataloader.dataset)
@@ -86,6 +122,18 @@ class Trainer:
         epochs: int,
         device: torch.device,
     ) -> None:
+        """
+        Runs the training loop for a specified number of epochs.
+        :param batch_size: Size of the batches to be used in training.
+        :param train_dl: DataLoader providing training data.
+        :param test_dl: DataLoader providing test data.
+        :param epochs: Number of epochs to train the model.
+        :param device: Device (CPU or GPU) on which to perform training.
+        This method iterates over the specified number of epochs, calling the training
+        and testing loops for each epoch. It updates the training metadata after each epoch
+        and checks if the training should stop based on external conditions.
+        """
+
         for t in range(epochs):
             print(f"Epoch {t+1}\n-------------------------------")
             self.train_loop(train_dl, device)
@@ -101,10 +149,28 @@ class Trainer:
         print("Done!")
 
     def save(self, path: str) -> None:
+        """
+        Saves the model to the specified path.
+        :param path: Path where the model will be saved.
+        This method saves the model's state dictionary to the specified path.
+        It is expected that the model class has a `save` method implemented.
+        """
+
         self.model.save(path)
 
 
 class TrainerRegression(Trainer):
+    """
+    Trainer class for regression tasks.
+    Inherits from the base Trainer class and implements specific training and testing loops
+    for regression models.
+    Attributes:
+        training (TrainingRead): Training session metadata.
+        model (Model): The neural network model to be trained.
+        loss_fn (nn.Module): Loss function used for training.
+        optimizer (torch.optim.Optimizer): Optimizer used for updating model weights.
+    """
+
     def __init__(
         self,
         training: TrainingRead,
@@ -112,9 +178,26 @@ class TrainerRegression(Trainer):
         loss_fn: nn.Module,
         optimizer: torch.optim.Optimizer,
     ) -> None:
+        """
+        Initializes the TrainerRegression with training metadata, model, loss function, and optimizer.
+        :param training: Training session metadata.
+        :param model: The neural network model to be trained.
+        :param loss_fn: Loss function used for training.
+        :param optimizer: Optimizer used for updating model weights.
+        """
+
         super().__init__(training, model, loss_fn, optimizer)
 
     def train_loop(self, dataloader: DataLoader, device: torch.device) -> None:
+        """
+        Runs a single training loop over the provided DataLoader for regression tasks.
+        :param dataloader: DataLoader providing batches of training data.
+        :param device: Device (CPU or GPU) on which to perform training.
+        This method iterates over the DataLoader, computes predictions, calculates loss,
+        performs backpropagation, and updates the model weights.
+        It also handles moving data to the specified device (CPU or GPU).
+        """
+
         self.model.train()
         total_loss = 0
 
@@ -136,6 +219,15 @@ class TrainerRegression(Trainer):
             total_loss += loss.item() * len(X)
 
     def test_loop(self, dataloader: DataLoader, device: torch.device):
+        """
+        Runs a single test loop over the provided DataLoader for regression tasks.
+        :param dataloader: DataLoader providing batches of test data.
+        :param device: Device (CPU or GPU) on which to perform testing.
+        This method evaluates the model on the test dataset, computes the average loss,
+        and calculates the average absolute error.
+        It prints the test results, including average loss and average absolute error.
+        """
+
         self.model.eval()
         total_loss = 0
         num_batches = len(dataloader)
@@ -158,6 +250,16 @@ class TrainerRegression(Trainer):
 
 
 def create_model(arch_dict: dict) -> Model:
+    """
+    Creates a model instance based on the provided architecture dictionary.
+    :param arch_dict: Dictionary containing architecture information, including:
+                      - architecture: Type of architecture (e.g., "MLP").
+                      - input_size: Size of the input features.
+                      - output_size: Number of output classes or size.
+    :return: An instance of the Model class corresponding to the specified architecture.
+    :raises ValueError: If the architecture type is not supported or if required fields are missing.
+    """
+
     if "architecture" not in arch_dict:
         raise ValueError("Architecture type is required")
     if arch_dict["architecture"] == "MLP":
@@ -169,6 +271,14 @@ def create_model(arch_dict: dict) -> Model:
 
 
 def load_model_from_path(save_dir: str, model: Model) -> Model:
+    """
+    Loads a model from the specified path if it exists.
+    :param save_dir: Directory where the model weights are saved.
+    :param model: The model instance to load weights into.
+    :return: The model instance with loaded weights.
+    If the model weights file does not exist, it returns the model without loading any weights.
+    """
+
     model_path = os.path.join(save_dir, "model.pt")
     if os.path.exists(model_path):
         print(f"Loaded weights from {model_path}")
@@ -179,6 +289,13 @@ def load_model_from_path(save_dir: str, model: Model) -> Model:
 
 
 class TrainConfig(SQLModel):
+    """
+    Configuration for training a model.
+    This class defines the parameters required for training a model, including
+    the path to the CSV file, target and input columns, model architecture,
+    learning rate, number of epochs, batch size, and other settings.
+    """
+
     csv_path: str
     target_columns: List[int]
     input_columns: List[int]
@@ -197,6 +314,10 @@ class TrainConfig(SQLModel):
 
 @app.task()
 def train_classification_model(model_id: int, raw_config: dict):
+    """
+    Task to train a classification model using the provided configuration.
+    """
+
     # --- read parameters ---
     try:
         config = TrainConfig(**raw_config)
@@ -266,6 +387,10 @@ def train_classification_model(model_id: int, raw_config: dict):
 
 @app.task()
 def train_regression_model(model_id: int, raw_config: dict):
+    """
+    Task to train a regression model using the provided configuration.
+    """
+    
     try:
         config = TrainConfig(**raw_config)
         archi_info = raw_config["model_arch"]

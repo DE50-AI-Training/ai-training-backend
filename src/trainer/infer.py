@@ -16,6 +16,13 @@ from trainer.trainer import create_model, load_model_from_path
 
 
 class InferConfig(SQLModel):
+    """
+    Configuration for inference tasks.
+    This class defines the parameters required for running inference on a dataset,
+    including the path to the dataset, input and target columns, model architecture,
+    batch size, and other settings.
+    """
+
     csv_path: str
     input_columns: List[int]
     target_columns: List[int]
@@ -32,7 +39,20 @@ class InferConfig(SQLModel):
 
 
 class InferenceDataset(Dataset):
+    """
+    Dataset for inference tasks, compatible with PyTorch DataLoader.
+    This dataset expects a NumPy array of features and normalizes them if necessary.
+    """
+
     def __init__(self, data: np.ndarray, dtype: torch.dtype = torch.float32):
+        """
+        Initializes the InferenceDataset with a NumPy array of features.
+        :param data: NumPy array containing the dataset features.
+        :param dtype: Data type for the tensors, default is torch.float32.
+        :raises
+            ValueError: If the input data is empty or not a NumPy array.
+        """
+
         self.data = data
         self.dtype = dtype
 
@@ -56,13 +76,30 @@ class InferenceDataset(Dataset):
 
 
     def __len__(self):
+        """
+        Returns the number of samples in the dataset, required by PyTorch DataLoader.
+        :return: Number of samples in the dataset.
+        """
+
         return len(self.data)
 
     def __getitem__(self, idx):
+        """
+        Returns a single sample from the dataset at the specified index, required by PyTorch DataLoader.
+        :param idx: Index of the sample to retrieve.
+        :return: Sample at the specified index as a PyTorch tensor.
+        """
+
         return torch.tensor(self.data[idx], dtype=self.dtype)
 
 
 def infer_on_dataset(raw_config: dict):
+    """
+    Perform inference on a dataset using a pre-trained model.
+    :param raw_config: Dictionary containing configuration parameters for inference.
+    :raises ValueError: If the configuration is invalid or if the dataset cannot be loaded.
+    """
+
     config = InferConfig(**raw_config)
     archi_info = raw_config["model_arch"]
 
@@ -151,6 +188,13 @@ def infer_on_dataset(raw_config: dict):
 
 
 def infer_single_input(raw_config: dict, input_data: List[float]):
+    """
+    Perform inference on a single input using a pre-trained model.
+    :param raw_config: Dictionary containing configuration parameters for inference.
+    :param input_data: List of input features for the inference.
+    :raises ValueError: If the configuration is invalid or if the input data is not compatible with the model.
+    """
+    
     config = InferConfig(**raw_config)
     archi_info = raw_config["model_arch"]
 

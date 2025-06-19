@@ -6,13 +6,15 @@ from sqlmodel import SQLModel
 
 
 class DatasetTypeEnum(StrEnum):
+    """Supported dataset file formats."""
     csv = "csv"
 
 
 class DatasetColumnTypeEnum(StrEnum):
-    numeric = "numeric"
-    categorical = "categorical"
-    image = "image"
+    """Column data types for automatic analysis."""
+    numeric = "numeric"        # Numerical data (int, float)
+    categorical = "categorical"  # Text/categorical data
+    image = "image"           # Future: image data support
 
 
 class DatasetColumn(SQLModel, CamelModel):

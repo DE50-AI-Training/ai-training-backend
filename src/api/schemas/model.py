@@ -10,8 +10,9 @@ from api.schemas.training import TrainingRead
 
 
 class ProblemTypeEnum(StrEnum):
-    classification = "classification"
-    regression = "regression"
+    """Supported machine learning problem types."""
+    classification = "classification"  # Predict discrete classes
+    regression = "regression"          # Predict continuous values
 
 
 class ModelBase(SQLModel, CamelModel):

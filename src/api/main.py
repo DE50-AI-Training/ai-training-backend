@@ -8,7 +8,7 @@ from api.database import engine
 from api.routers import datasets, models
 
 
-# Create the database engine
+# Database initialization on startup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
@@ -68,10 +68,14 @@ This API manages the complete ML model lifecycle:
         "name": "MIT",
     },
 )
+
+# Include API routers
 app.include_router(models.router)
 app.include_router(datasets.router)
+
+# CORS configuration for frontend integration
 origins = [
-    "http://localhost:3000",
+    "http://localhost:3000",  # React development server
 ]
 
 app.add_middleware(

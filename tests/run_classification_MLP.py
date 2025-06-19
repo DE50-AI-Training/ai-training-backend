@@ -17,7 +17,7 @@ df = pd.get_dummies(df.iloc[:, [0, 1, 2]])
 input_dim = df.shape[1]
 output_dim = 3
 
-
+# simulation de l'entraînement d'un modèle de classification MLP
 training = TrainingRead(
     batch_size=16,
     max_epochs=1000,

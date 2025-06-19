@@ -14,7 +14,15 @@ from config import settings
 
 
 class DatasetService:
-    """Service layer for dataset management"""
+    """
+    Service layer for dataset management.
+    
+    Handles dataset operations:
+    - CSV file upload and analysis
+    - Dataset finalization and transformation
+    - File storage and cleanup
+    - Dataset duplication and deletion
+    """
 
     @staticmethod
     def get_all_datasets(session: Session) -> List[DatasetRead]:
@@ -32,16 +40,19 @@ class DatasetService:
         raw_content = await file.read()
         content = raw_content.decode("utf-8")
 
+        # Automatic CSV format detection
         sniffer = csv.Sniffer()
         delimiter = sniffer.sniff(content).delimiter
         df = pd.read_csv(io.StringIO(content), delimiter=delimiter)
 
+        # Extract unique values for each column (for categorical analysis)
         classes = {}
         for col in df.columns:
             classes[col] = sorted(df[col].astype(str).unique().tolist())
 
         row_count = df.shape[0]
 
+        # Create dataset in draft mode
         dataset = Dataset(
             name=file.filename,
             row_count=row_count,
@@ -56,6 +67,7 @@ class DatasetService:
         session.commit()
         session.refresh(dataset)
 
+        # Analyze and create column metadata
         columns = [
             DatasetColumn(
                 name=col,
@@ -68,12 +80,12 @@ class DatasetService:
             for col in df.columns
         ]
 
-        # Insert all columns into the database in one go
+        # Bulk insert for performance
         session.add_all(columns)
         session.commit()
         session.refresh(dataset)
 
-        # Create storage directory if it doesn't exist
+        # Store file to persistent storage
         os.makedirs(f"{settings.storage_path}/datasets/{dataset.id}", exist_ok=True)
         with open(
             f"{settings.storage_path}/datasets/{dataset.id}/dataset.csv", "wb"
@@ -115,7 +127,7 @@ class DatasetService:
         if not db_dataset:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
-        # Create a new dataset with the same properties
+        # Create new dataset with copied metadata
         new_dataset = Dataset(
             name=f"{db_dataset.name} (copy)",
             row_count=db_dataset.row_count,
@@ -130,7 +142,7 @@ class DatasetService:
         session.commit()
         session.refresh(new_dataset)
 
-        # Duplicate the columns
+        # Duplicate column definitions
         for column in db_dataset.columns:
             new_column = DatasetColumn(
                 name=column.name,
@@ -143,7 +155,7 @@ class DatasetService:
 
         session.commit()
 
-        # Copy the dataset file to the new location
+        # Copy physical file to new location
         source_path = f"{settings.storage_path}/datasets/{db_dataset.id}/dataset.csv"
         destination_path = (
             f"{settings.storage_path}/datasets/{new_dataset.id}/dataset.csv"

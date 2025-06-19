@@ -2,8 +2,21 @@ from trainer.architectures import Architecture, ALL_ACTIVATIONS
 
 
 class MLPArchitecture(Architecture):
+    """
+    Class representing a Multi-Layer Perceptron (MLP) architecture.
+    Inherits from the base Architecture class and validates the MLP-specific parameters.
+    """
+
     def __init__(self, arch_info: dict) -> None:
+        """
+        Initializes the MLP architecture with the provided architecture information.
+        :param arch_info: Dictionary containing architecture information including:
+                          - layers: List of integers representing the number of neurons in each layer.
+                          - activation: Activation function to be used in the MLP.
+        """
+        
         super().__init__(arch_info)
+
         assert "layers" in arch_info, "Layers information is required"
         assert "activation" in arch_info, "Activation function is required"
         assert (
